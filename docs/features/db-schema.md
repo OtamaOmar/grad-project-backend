@@ -121,21 +121,23 @@ Expected: `Database connection OK`, then `Migrations complete!`, then the list o
 
 Migrations run in order of the number at the start of the file name (a timestamp of when the file was created). Never rename or edit a migration after it has been pushed.
 
-| File                            | Tables                                                                                    | Status                   |
-| ------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------ |
-| `1791380314462_bylaw-layer.sql` | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement` | Done, tested up and down |
+| File                                 | Tables                                                                                    | Status                   |
+| ------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------ |
+| `1791380314462_bylaw-layer.sql`      | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement` | Done, tested up and down |
+| `1791385388062_curriculum-layer.sql` | `program`, `track`, `course`, `course_component`, `requisite`                             | Done, tested up and down |
 
 ## Files changed
 
-| File                                       | Change                                                    |
-| ------------------------------------------ | --------------------------------------------------------- |
-| `package.json`                             | Added `pg`, `node-pg-migrate`, and migrate/db scripts     |
-| `package-lock.json`                        | Lockfile update from `npm install`                        |
-| `.env.example`                             | Template for `PORT` and `DATABASE_URL` (placeholder only) |
-| `src/config/db.js`                         | Shared `pg` Pool + `query()` helper                       |
-| `scripts/db-check.js`                      | Connection health check                                   |
-| `migrations/.gitkeep`                      | Keeps the migrations folder in Git                        |
-| `migrations/1791380314462_bylaw-layer.sql` | The 6 bylaw-layer tables                                  |
+| File                                            | Change                                                    |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| `package.json`                                  | Added `pg`, `node-pg-migrate`, and migrate/db scripts     |
+| `package-lock.json`                             | Lockfile update from `npm install`                        |
+| `.env.example`                                  | Template for `PORT` and `DATABASE_URL` (placeholder only) |
+| `src/config/db.js`                              | Shared `pg` Pool + `query()` helper                       |
+| `scripts/db-check.js`                           | Connection health check                                   |
+| `migrations/.gitkeep`                           | Keeps the migrations folder in Git                        |
+| `migrations/1791380314462_bylaw-layer.sql`      | The 6 bylaw-layer tables                                  |
+| `migrations/1791385388062_curriculum-layer.sql` | The 5 curriculum and prerequisite tables                  |
 
 ## Decisions
 
@@ -147,12 +149,13 @@ Migrations run in order of the number at the start of the file name (a timestamp
 - **Every foreign key uses `ON DELETE RESTRICT ON UPDATE RESTRICT`.** A parent row (for example a bylaw) cannot be deleted, or have its id changed, while other rows still point to it. Other columns (name, code, numbers) can still be edited.
 - **Ids are `GENERATED ALWAYS AS IDENTITY`.** PostgreSQL always picks the id, so seed data must link rows by their code (for example the bylaw with code `old_cs`), never by a typed id.
 - Every PK, FK, and UNIQUE constraint has a readable name, so error messages say which rule failed.
+- **`requisite` targets are not checked yet.** In Phase 1, `required_course_id`, `standing_band_id`, and `placement_id` can all be null. The rule "exactly one target, matching `requisite_type`" is a CHECK constraint added in Phase 2 (database integrity), together with the `lab_kind` check on `course_component`.
 
 ## Progress
 
 - [x] Migration tooling
 - [x] Bylaw layer tables (6)
-- [ ] Curriculum + prerequisite tables
+- [x] Curriculum + prerequisite tables
 - [ ] Plan template tables + equivalence
 - [ ] Student, offering, data_gap, app_user
 
