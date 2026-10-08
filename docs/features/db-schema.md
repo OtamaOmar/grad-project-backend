@@ -3,7 +3,7 @@
 **Branch:** feature/db-schema
 **Owner:** Kamel (Backend A)
 **Phase:** 1 – Foundations (Excel plan: "Finish the schema")
-**Status:** In progress
+**Status:** Done (waiting for PR review)
 
 ## Goal
 
@@ -121,25 +121,27 @@ Expected: `Database connection OK`, then `Migrations complete!`, then the list o
 
 Migrations run in order of the number at the start of the file name (a timestamp of when the file was created). Never rename or edit a migration after it has been pushed.
 
-| File                                    | Tables                                                                                      | Status                   |
-| --------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------ |
-| `1791380314462_bylaw-layer.sql`         | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement`   | Done, tested up and down |
-| `1791385388062_curriculum-layer.sql`    | `program`, `track`, `course`, `course_component`, `requisite`                               | Done, tested up and down |
-| `1791445586940_plan-template-layer.sql` | `plan_template`, `plan_slot`, `elective_pool`, `elective_pool_course`, `course_equivalence` | Done, tested up and down |
+| File                                       | Tables                                                                                                     | Status                   |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `1791380314462_bylaw-layer.sql`            | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement`                  | Done, tested up and down |
+| `1791385388062_curriculum-layer.sql`       | `program`, `track`, `course`, `course_component`, `requisite`                                              | Done, tested up and down |
+| `1791445586940_plan-template-layer.sql`    | `plan_template`, `plan_slot`, `elective_pool`, `elective_pool_course`, `course_equivalence`                | Done, tested up and down |
+| `1791448635790_student-offering-layer.sql` | `student`, `academic_term`, `enrollment`, `offering_forecast`, `offering_decision`, `data_gap`, `app_user` | Done, tested up and down |
 
 ## Files changed
 
-| File                                               | Change                                                    |
-| -------------------------------------------------- | --------------------------------------------------------- |
-| `package.json`                                     | Added `pg`, `node-pg-migrate`, and migrate/db scripts     |
-| `package-lock.json`                                | Lockfile update from `npm install`                        |
-| `.env.example`                                     | Template for `PORT` and `DATABASE_URL` (placeholder only) |
-| `src/config/db.js`                                 | Shared `pg` Pool + `query()` helper                       |
-| `scripts/db-check.js`                              | Connection health check                                   |
-| `migrations/.gitkeep`                              | Keeps the migrations folder in Git                        |
-| `migrations/1791380314462_bylaw-layer.sql`         | The 6 bylaw-layer tables                                  |
-| `migrations/1791385388062_curriculum-layer.sql`    | The 5 curriculum and prerequisite tables                  |
-| `migrations/1791445586940_plan-template-layer.sql` | The 5 plan template and equivalence tables                |
+| File                                                  | Change                                                    |
+| ----------------------------------------------------- | --------------------------------------------------------- |
+| `package.json`                                        | Added `pg`, `node-pg-migrate`, and migrate/db scripts     |
+| `package-lock.json`                                   | Lockfile update from `npm install`                        |
+| `.env.example`                                        | Template for `PORT` and `DATABASE_URL` (placeholder only) |
+| `src/config/db.js`                                    | Shared `pg` Pool + `query()` helper                       |
+| `scripts/db-check.js`                                 | Connection health check                                   |
+| `migrations/.gitkeep`                                 | Keeps the migrations folder in Git                        |
+| `migrations/1791380314462_bylaw-layer.sql`            | The 6 bylaw-layer tables                                  |
+| `migrations/1791385388062_curriculum-layer.sql`       | The 5 curriculum and prerequisite tables                  |
+| `migrations/1791445586940_plan-template-layer.sql`    | The 5 plan template and equivalence tables                |
+| `migrations/1791448635790_student-offering-layer.sql` | The 6 student and offering core tables, plus `app_user`   |
 
 ## Decisions
 
@@ -154,6 +156,9 @@ Migrations run in order of the number at the start of the file name (a timestamp
 - **`requisite` targets are not checked yet.** In Phase 1, `required_course_id`, `standing_band_id`, and `placement_id` can all be null. The rule "exactly one target, matching `requisite_type`" is a CHECK constraint added in Phase 2 (database integrity), together with the `lab_kind` check on `course_component`.
 - **`elective_pool_course` is a pure junction table** (database-design.md §3): only `elective_pool_id` and `course_id`, with a composite primary key on the pair. It has no `id` and no timestamps.
 - **Other Phase 2 checks still to add:** `plan_slot` must point to exactly one of `course_id` or `elective_pool_id`, and `course_equivalence.old_course_id` must differ from `new_course_id`. Both are CHECK constraints for Phase 2 (database integrity).
+- **Result: 22 core tables + `app_user` = 23 tables** (24 in `\dt`, counting the tool's own `pgmigrations` table).
+- **`offering_forecast.is_incomplete` is a stored generated column.** PostgreSQL computes it from the four incomplete counts, so it can never disagree with them.
+- **Not built yet, on purpose:** `forecast_line` and `source_passage` (Phase 1 extensions whose design is not final; `source_passage` also needs pgvector), and the Phase 2 advising tables (database-design.md §20). Value-list checks (status, attempt_state, method, role, and others), range checks, and the approver and app_user consistency checks are Phase 2 (database integrity).
 
 ## Progress
 
@@ -161,7 +166,7 @@ Migrations run in order of the number at the start of the file name (a timestamp
 - [x] Bylaw layer tables (6)
 - [x] Curriculum + prerequisite tables
 - [x] Plan template tables + equivalence
-- [ ] Student, offering, data_gap, app_user
+- [x] Student, offering, data_gap, app_user
 
 ## Open questions (for Omar)
 
@@ -169,6 +174,7 @@ Migrations run in order of the number at the start of the file name (a timestamp
 - Do we need a history of course code or name changes?
 - Do we want soft delete (for example `is_active` on `course`)?
 - Commit message style: keep the `type(scope): ...` format, or plain English?
+- Is the registration-file import script part of my Phase 1 work, or only the seed data?
 
 ## Notes for the team
 
