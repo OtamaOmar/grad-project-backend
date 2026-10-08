@@ -13,7 +13,8 @@
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
     "migrate:create": "node-pg-migrate create --migration-file-language sql",
-    "db:check": "node scripts/db-check.js"
+    "db:check": "node scripts/db-check.js",
+    "db:seed": "node scripts/db-seed.js"
   },
   "repository": {
     "type": "git",
