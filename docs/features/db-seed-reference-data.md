@@ -1,0 +1,73 @@
+# Feature: Seed reference data
+
+**Branch:** feature/db-seed-reference-data
+**Owner:** Kamel (Backend A)
+**Phase:** 1 – Foundations (Excel plan: "Seeds and imports")
+**Status:** In progress
+**Depends on:** feature/db-schema (PR #1). This branch starts from that branch, so it already contains all the tables.
+
+## Goal
+
+Fill the reference tables with the official data from `docs/database-design.md`, using seed files that are safe to run more than once.
+
+## Scope
+
+**Part A (now): data the design doc states**
+
+- `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement`
+- `program`, `track`
+- `plan_template` (the 8 template headers only, no slots)
+- `data_gap` (the 12 open gaps of database-design.md §14)
+
+**Part B (later): needs source files we do not have yet**
+
+- `course`, `course_component`, `requisite`, `plan_slot`, `elective_pool`, `elective_pool_course`
+- Waiting for: the 8-sheet study-plan workbook and the old and 2025 bylaw PDFs.
+
+**Out of scope**
+
+- `student`, `academic_term`, `enrollment`, `offering_forecast`, `offering_decision`, `course_equivalence`: designed to stay empty (database-design.md §13).
+- The registration-file import script (open question for Omar).
+
+## Related features (Backend A)
+
+| #   | Feature                   | Phase | Branch                           | Notes file                                            |
+| --- | ------------------------- | ----- | -------------------------------- | ----------------------------------------------------- |
+| 1   | Database schema           | 1     | `feature/db-schema`              | `docs/features/db-schema.md`                          |
+| 2   | Seeds and imports         | 1     | `feature/db-seed-reference-data` | `docs/features/db-seed-reference-data.md` (this file) |
+| 3   | Database integrity        | 2     | TBC with Omar                    | `docs/features/db-integrity.md`                       |
+| 4   | Database forecast support | 2     | TBC with Omar                    | `docs/features/db-forecast-support.md`                |
+
+## What are seeds? (simple explanation)
+
+Migrations build the tables (the structure). Seeds fill them with the starting data the system needs, such as the bylaw rules and grade letters.
+
+| Restaurant                       | This project                      |
+| -------------------------------- | --------------------------------- |
+| Building the kitchen and shelves | Migrations (`npm run migrate:up`) |
+| Stocking the shelves             | Seeds (`npm run db:seed`)         |
+
+## Decisions
+
+- **Seeds are separate from migrations.** Seed files live in `seeds/` and run with `npm run db:seed`. Structure and data stay apart, and a wrong value can be fixed by editing the seed file and running it again.
+- **Seeds are safe to re-run.** Rows that already exist are skipped, so running `npm run db:seed` twice does not create duplicates.
+- **No invented data.** Only values written in `docs/database-design.md` are seeded. The only exceptions are the clearly labelled placeholders below (2025 program names and track codes), which the doc does not give. Anything else that is missing stays out and is listed in Open questions or in `data_gap`.
+- **2025 program names are placeholders.** The design doc gives only the codes `AI`, `BMD`, and `CSEC`, so their `name` is the code itself until the full names are confirmed.
+- **Track codes are chosen by the team.** The design doc gives track names but no codes, so each code is a short lower-case version of the official name (for example `big_data` for "Big Data").
+- **Grade scales are not yet checked against the PDFs.** They are seeded from database-design.md §3, which says to re-check them against the bylaw PDFs and that the PDF wins if they disagree.
+
+## Progress
+
+- [x] Notes file
+- [ ] Seed tooling (`seeds/` folder, `scripts/db-seed.js`, `npm run db:seed`)
+- [ ] Bylaw layer seeds
+- [ ] Programs, tracks, and plan template headers
+- [ ] Data gaps
+- [ ] Part B (courses, requisites, plan slots, elective pools)
+
+## Open questions (for Omar)
+
+- Where are the 8-sheet study-plan workbook and the old and 2025 bylaw PDFs? Part B needs them, and the grade scales must be re-checked against the PDFs (database-design.md §3).
+- What are the full names of the 2025 programs `AI`, `BMD`, and `CSEC`?
+- Are the chosen track codes (for example `media`, `big_data`) OK?
+- Is the registration-file import script part of my Phase 1 work, or only the seed data?
