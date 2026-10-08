@@ -121,23 +121,25 @@ Expected: `Database connection OK`, then `Migrations complete!`, then the list o
 
 Migrations run in order of the number at the start of the file name (a timestamp of when the file was created). Never rename or edit a migration after it has been pushed.
 
-| File                                 | Tables                                                                                    | Status                   |
-| ------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------ |
-| `1791380314462_bylaw-layer.sql`      | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement` | Done, tested up and down |
-| `1791385388062_curriculum-layer.sql` | `program`, `track`, `course`, `course_component`, `requisite`                             | Done, tested up and down |
+| File                                    | Tables                                                                                      | Status                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------ |
+| `1791380314462_bylaw-layer.sql`         | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement`   | Done, tested up and down |
+| `1791385388062_curriculum-layer.sql`    | `program`, `track`, `course`, `course_component`, `requisite`                               | Done, tested up and down |
+| `1791445586940_plan-template-layer.sql` | `plan_template`, `plan_slot`, `elective_pool`, `elective_pool_course`, `course_equivalence` | Done, tested up and down |
 
 ## Files changed
 
-| File                                            | Change                                                    |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| `package.json`                                  | Added `pg`, `node-pg-migrate`, and migrate/db scripts     |
-| `package-lock.json`                             | Lockfile update from `npm install`                        |
-| `.env.example`                                  | Template for `PORT` and `DATABASE_URL` (placeholder only) |
-| `src/config/db.js`                              | Shared `pg` Pool + `query()` helper                       |
-| `scripts/db-check.js`                           | Connection health check                                   |
-| `migrations/.gitkeep`                           | Keeps the migrations folder in Git                        |
-| `migrations/1791380314462_bylaw-layer.sql`      | The 6 bylaw-layer tables                                  |
-| `migrations/1791385388062_curriculum-layer.sql` | The 5 curriculum and prerequisite tables                  |
+| File                                               | Change                                                    |
+| -------------------------------------------------- | --------------------------------------------------------- |
+| `package.json`                                     | Added `pg`, `node-pg-migrate`, and migrate/db scripts     |
+| `package-lock.json`                                | Lockfile update from `npm install`                        |
+| `.env.example`                                     | Template for `PORT` and `DATABASE_URL` (placeholder only) |
+| `src/config/db.js`                                 | Shared `pg` Pool + `query()` helper                       |
+| `scripts/db-check.js`                              | Connection health check                                   |
+| `migrations/.gitkeep`                              | Keeps the migrations folder in Git                        |
+| `migrations/1791380314462_bylaw-layer.sql`         | The 6 bylaw-layer tables                                  |
+| `migrations/1791385388062_curriculum-layer.sql`    | The 5 curriculum and prerequisite tables                  |
+| `migrations/1791445586940_plan-template-layer.sql` | The 5 plan template and equivalence tables                |
 
 ## Decisions
 
@@ -150,13 +152,15 @@ Migrations run in order of the number at the start of the file name (a timestamp
 - **Ids are `GENERATED ALWAYS AS IDENTITY`.** PostgreSQL always picks the id, so seed data must link rows by their code (for example the bylaw with code `old_cs`), never by a typed id.
 - Every PK, FK, and UNIQUE constraint has a readable name, so error messages say which rule failed.
 - **`requisite` targets are not checked yet.** In Phase 1, `required_course_id`, `standing_band_id`, and `placement_id` can all be null. The rule "exactly one target, matching `requisite_type`" is a CHECK constraint added in Phase 2 (database integrity), together with the `lab_kind` check on `course_component`.
+- **`elective_pool_course` is a pure junction table** (database-design.md §3): only `elective_pool_id` and `course_id`, with a composite primary key on the pair. It has no `id` and no timestamps.
+- **Other Phase 2 checks still to add:** `plan_slot` must point to exactly one of `course_id` or `elective_pool_id`, and `course_equivalence.old_course_id` must differ from `new_course_id`. Both are CHECK constraints for Phase 2 (database integrity).
 
 ## Progress
 
 - [x] Migration tooling
 - [x] Bylaw layer tables (6)
 - [x] Curriculum + prerequisite tables
-- [ ] Plan template tables + equivalence
+- [x] Plan template tables + equivalence
 - [ ] Student, offering, data_gap, app_user
 
 ## Open questions (for Omar)
