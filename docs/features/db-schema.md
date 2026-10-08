@@ -146,27 +146,29 @@ Think of it like a recipe:
 
 Migrations run in order of the number at the start of the file name (a timestamp of when the file was created). Never rename or edit a migration after it has been pushed.
 
-| File                                       | Tables                                                                                                     | Status                   |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `1791380314462_bylaw-layer.sql`            | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement`                  | Done, tested up and down |
-| `1791385388062_curriculum-layer.sql`       | `program`, `track`, `course`, `course_component`, `requisite`                                              | Done, tested up and down |
-| `1791445586940_plan-template-layer.sql`    | `plan_template`, `plan_slot`, `elective_pool`, `elective_pool_course`, `course_equivalence`                | Done, tested up and down |
-| `1791448635790_student-offering-layer.sql` | `student`, `academic_term`, `enrollment`, `offering_forecast`, `offering_decision`, `data_gap`, `app_user` | Done, tested up and down |
+| File                                         | Tables                                                                                                     | Status                   |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `1791380314462_bylaw-layer.sql`              | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement`                  | Done, tested up and down |
+| `1791385388062_curriculum-layer.sql`         | `program`, `track`, `course`, `course_component`, `requisite`                                              | Done, tested up and down |
+| `1791445586940_plan-template-layer.sql`      | `plan_template`, `plan_slot`, `elective_pool`, `elective_pool_course`, `course_equivalence`                | Done, tested up and down |
+| `1791448635790_student-offering-layer.sql`   | `student`, `academic_term`, `enrollment`, `offering_forecast`, `offering_decision`, `data_gap`, `app_user` | Done, tested up and down |
+| `1791453343782_offering-decision-unique.sql` | Adds UNIQUE (`academic_term_id`, `course_id`) on `offering_decision`                                       | Done, tested up and down |
 
 ## Files changed
 
-| File                                                  | Change                                                    |
-| ----------------------------------------------------- | --------------------------------------------------------- |
-| `package.json`                                        | Added `pg`, `node-pg-migrate`, and migrate/db scripts     |
-| `package-lock.json`                                   | Lockfile update from `npm install`                        |
-| `.env.example`                                        | Template for `PORT` and `DATABASE_URL` (placeholder only) |
-| `src/config/db.js`                                    | Shared `pg` Pool + `query()` helper                       |
-| `scripts/db-check.js`                                 | Connection health check                                   |
-| `migrations/.gitkeep`                                 | Keeps the migrations folder in Git                        |
-| `migrations/1791380314462_bylaw-layer.sql`            | The 6 bylaw-layer tables                                  |
-| `migrations/1791385388062_curriculum-layer.sql`       | The 5 curriculum and prerequisite tables                  |
-| `migrations/1791445586940_plan-template-layer.sql`    | The 5 plan template and equivalence tables                |
-| `migrations/1791448635790_student-offering-layer.sql` | The 6 student and offering core tables, plus `app_user`   |
+| File                                                    | Change                                                         |
+| ------------------------------------------------------- | -------------------------------------------------------------- |
+| `package.json`                                          | Added `pg`, `node-pg-migrate`, and migrate/db scripts          |
+| `package-lock.json`                                     | Lockfile update from `npm install`                             |
+| `.env.example`                                          | Template for `PORT` and `DATABASE_URL` (placeholder only)      |
+| `src/config/db.js`                                      | Shared `pg` Pool + `query()` helper                            |
+| `scripts/db-check.js`                                   | Connection health check                                        |
+| `migrations/.gitkeep`                                   | Keeps the migrations folder in Git                             |
+| `migrations/1791380314462_bylaw-layer.sql`              | The 6 bylaw-layer tables                                       |
+| `migrations/1791385388062_curriculum-layer.sql`         | The 5 curriculum and prerequisite tables                       |
+| `migrations/1791445586940_plan-template-layer.sql`      | The 5 plan template and equivalence tables                     |
+| `migrations/1791448635790_student-offering-layer.sql`   | The 6 student and offering core tables, plus `app_user`        |
+| `migrations/1791453343782_offering-decision-unique.sql` | One offering decision per course and term (fix from PR review) |
 
 ## Decisions
 
@@ -184,6 +186,7 @@ Migrations run in order of the number at the start of the file name (a timestamp
 - **Result: 22 core tables + `app_user` = 23 tables** (24 in `\dt`, counting the tool's own `pgmigrations` table).
 - **`offering_forecast.is_incomplete` is a stored generated column.** PostgreSQL computes it from the four incomplete counts, so it can never disagree with them.
 - **Not built yet, on purpose:** `forecast_line` and `source_passage` (Phase 1 extensions whose design is not final; `source_passage` also needs pgvector), and the Phase 2 advising tables (database-design.md §20). Value-list checks (status, attempt_state, method, role, and others), range checks, and the approver and app_user consistency checks are Phase 2 (database integrity).
+- **One offering decision per course and term** (added after PR review). `offering_decision` has UNIQUE (`academic_term_id`, `course_id`), because `PUT /api/offering-decisions` (docs/api-contract.md) saves the current decision and database-design.md §4 says "One course can be decided per term". The §3 column table did not list this constraint, so it was added as a new migration instead of editing a pushed one.
 
 ## Progress
 
