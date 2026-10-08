@@ -117,6 +117,31 @@ Expected: `Database connection OK`, then `Migrations complete!`, then the list o
 | `npm run migrate:up`               | Runs all pending migrations          |
 | `npm run migrate:down`             | Undoes the last migration            |
 
+## What are migrations? (simple explanation)
+
+A migration is a numbered SQL file that builds or changes the database structure (tables, columns, keys). A tool (`node-pg-migrate`) runs these files in order and remembers which ones already ran.
+
+Think of it like a recipe:
+
+| Restaurant         | This project                        |
+| ------------------ | ----------------------------------- |
+| The kitchen        | PostgreSQL installed on your laptop |
+| The recipe         | The SQL files in `migrations/`      |
+| Cooking the recipe | `npm run migrate:up`                |
+| The dish           | The 23 tables in your database      |
+
+**GitHub stores files, not databases.** `git pull` gives you the SQL files, but your database stays empty until you run `npm run migrate:up`. That command reads the files and creates the tables in your own PostgreSQL. Everyone gets the same tables, but each person keeps their own data.
+
+**Why we use migrations:**
+
+1. **Same database for everyone.** One command builds the exact same 23 tables on every laptop. Nobody copies SQL by hand.
+2. **Safe changes later.** When the database changes (for example Phase 2 adds checks and indexes), we add a new migration file. `npm run migrate:up` runs only the new files, so nobody has to rebuild anything.
+3. **Undo.** `npm run migrate:down` undoes the last migration if something is wrong.
+
+**How the tool remembers:** it keeps a table called `pgmigrations` in your database with the name of every migration that already ran. The number at the start of each file name sets the order, so never rename a migration after it has been pushed.
+
+**What you need to do after pulling new migrations:** run `npm run migrate:up`. That is all.
+
 ## Migrations
 
 Migrations run in order of the number at the start of the file name (a timestamp of when the file was created). Never rename or edit a migration after it has been pushed.
