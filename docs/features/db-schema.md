@@ -190,6 +190,7 @@ Migrations run in order of the number at the start of the file name (a timestamp
 - **Not built yet, on purpose:** `source_passage` (Phase 1 extension; it needs pgvector and the embedding dimension is not decided yet), and the Phase 2 advising tables (database-design.md §20). Value-list checks (status, attempt_state, method, role, and others), range checks, and the approver and app_user consistency checks are Phase 2 (database integrity).
 - **One offering decision per course and term** (added after PR review). `offering_decision` has UNIQUE (`academic_term_id`, `course_id`), because `PUT /api/offering-decisions` (docs/api-contract.md) saves the current decision and database-design.md §4 says "One course can be decided per term". The §3 column table did not list this constraint, so it was added as a new migration instead of editing a pushed one.
 - **forecast_line is created empty** (Omar's decision). Its CHECKs and the later run index belong to feature/database-integrity; queries and writes belong to feature/database-forecast-support.
+- **The shared pool logs idle-client errors instead of crashing.** `src/config/db.js` listens for the pool's `error` event (for example after a database restart) and logs the message, so the server keeps running.
 
 ## Progress
 
