@@ -3,8 +3,8 @@
 **Branch:** feature/db-seed-reference-data
 **Owner:** Kamel (Backend A)
 **Phase:** 1 – Foundations (Excel plan: "Seeds and imports")
-**Status:** In progress
-**Depends on:** feature/db-schema (PR #1). This branch starts from that branch, so it already contains all the tables.
+**Status:** Part A done. Part B waiting for source files (workbook + bylaw PDFs).
+**Depends on:** feature/db-schema (PR #1). This branch starts from that branch, so it already contains all the tables. Review its PR after PR #1.
 
 ## Goal
 
@@ -82,6 +82,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - [x] Bylaw layer seeds
 - [x] Programs, tracks, and plan template headers
 - [x] Data gaps
+- [x] Part A done (seeds 001-003)
 - [ ] Part B (courses, requisites, plan slots, elective pools)
 
 ## Open questions (for Omar)
