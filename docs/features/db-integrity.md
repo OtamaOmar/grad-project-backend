@@ -3,7 +3,7 @@
 **Branch:** feature/database-integrity
 **Owner:** Kamel (Backend A)
 **Phase:** 2 – Core features (Excel plan: "Constraints, requisite integrity, plan-slot rules, indexes, range checks")
-**Status:** Task 1 done and tested (up, down, up; bad values rejected). Task 2 not started.
+**Status:** Task 1 done and tested (up, down, up; bad values rejected). Task 2 done and tested (up, down, up; all 5 trigger tests raised their error).
 **Depends on:** `main` after PR #1 (24 tables, 6 migrations)
 
 ## Goal
@@ -34,13 +34,14 @@ No new tables, no new columns.
 | #   | Task                                    | Status       |
 | --- | --------------------------------------- | ------------ |
 | 1   | CHECK constraints + indexes (this task) | Done, tested |
-| 2   | Cross-bylaw triggers (§15.3)            | Not started  |
+| 2   | Cross-bylaw triggers (§15.3)            | Done, tested |
 
 ## Migrations
 
-| File                                   | What it adds                    | Status       |
-| -------------------------------------- | ------------------------------- | ------------ |
-| `1791495907736_checks-and-indexes.sql` | 55 CHECK constraints, 4 indexes | Done, tested |
+| File                                     | What it adds                    | Status       |
+| ---------------------------------------- | ------------------------------- | ------------ |
+| `1791495907736_checks-and-indexes.sql`   | 55 CHECK constraints, 4 indexes | Done, tested |
+| `1791499748355_cross-bylaw-triggers.sql` | 5 trigger functions, 5 triggers | Done, tested |
 
 ## CHECK constraints (Task 1)
 
@@ -114,6 +115,21 @@ Where §15.2 gives a name, that name is used as is.
 | `enrollment_student_idx`         | `enrollment (student_id)`                      | §15.4       |
 | `enrollment_student_attempt_idx` | `enrollment (student_id, attempt_state)`       | §15.4       |
 
+## Cross-bylaw triggers (Task 2)
+
+Each trigger runs a plpgsql function BEFORE INSERT OR UPDATE.
+On a mismatch it raises an error that names the rule. It never fixes the row.
+A nullable link that is null (a requisite target, a plan slot course or pool) is skipped; the Task 1 CHECKs already require exactly one.
+The `requisite` function is the §15.3 SQL as written. The other four follow the same pattern.
+
+| Table                  | Trigger                                   | Function                                | Rule                                                                                                            | Doc section |
+| ---------------------- | ----------------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------- |
+| `requisite`            | `requisite_same_bylaw_trigger`            | `trg_requisite_same_bylaw()`            | `required_course_id`, `standing_band_id` and `placement_id` (when set) have the bylaw of the target `course_id` | §15.3       |
+| `enrollment`           | `enrollment_same_bylaw_trigger`           | `trg_enrollment_same_bylaw()`           | The course has the student's bylaw                                                                              | §15.3       |
+| `plan_slot`            | `plan_slot_same_bylaw_trigger`            | `trg_plan_slot_same_bylaw()`            | The slot course or elective pool (when set) has the template's bylaw                                            | §15.3       |
+| `elective_pool_course` | `elective_pool_course_same_bylaw_trigger` | `trg_elective_pool_course_same_bylaw()` | The member course has the pool's bylaw                                                                          | §15.3       |
+| `course_equivalence`   | `course_equivalence_bylaws_trigger`       | `trg_course_equivalence_bylaws()`       | `old_course_id` is in bylaw `old_cs`; `new_course_id` is in bylaw `bylaw_2025` (by `bylaw.code`, not by id)     | §15.3       |
+
 ## Service checks (not in the DB)
 
 - The approver of an `offering_decision` must be a coordinator (§3 offering_decision, §15.1). A CHECK cannot read `app_user`.
@@ -142,21 +158,65 @@ npm run migrate:down
 npm run migrate:up
 ```
 
-- `migrate:up` adds the checks and indexes.
-- `migrate:down` removes only this migration's checks and indexes; the 24 tables stay.
+- Task 1: `migrate:up` adds the checks and indexes.
+- Task 1: `migrate:down` removed only its checks and indexes; the 24 tables stayed.
+- Task 2: `migrate:down` now undoes only the newest migration: it drops the 5 triggers and 5 functions. The Task 1 checks and indexes stay.
 - In psql, `\d+ <table>` lists the checks; `\di` lists the indexes.
 - After seeding, `npm run db:seed` must still pass (the seed rows must satisfy every check).
 - Tested on a database with the Part A seed rows: all rows passed every check, and 3 bad updates (data_gap status 'closed', bylaw pass_percentage 150, credit_limit term_type 'winter') were rejected by their CHECK constraints.
+
+### Task 2: trigger tests
+
+Run after `npm run migrate:up`, on a database with the Part A seed rows (it needs the bylaws `old_cs` and `bylaw_2025`).
+Each command adds fake rows (codes start with `TEST_`), inserts one same-bylaw row that must pass, then one cross-bylaw row that must fail.
+Everything is inside `BEGIN ... ROLLBACK`. The failing INSERT stops the command before `ROLLBACK`, and psql closes the session, so the transaction is never committed and nothing is saved.
+Expected result: one `ERROR:` line with the message shown above each command.
+
+`requisite`, expected `ERROR:  requisite required_course must match target course bylaw`:
+
+```powershell
+psql -U grad_app -d grad_project -c "BEGIN; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_OLD', 'Test old course', 3, 'test' FROM bylaw WHERE code = 'old_cs'; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_OLD_2', 'Test old course 2', 3, 'test' FROM bylaw WHERE code = 'old_cs'; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_NEW', 'Test new course', 3, 'test' FROM bylaw WHERE code = 'bylaw_2025'; INSERT INTO requisite (course_id, group_number, requisite_type, required_course_id, source_reference) VALUES ((SELECT id FROM course WHERE code = 'TEST_OLD'), 1, 'course', (SELECT id FROM course WHERE code = 'TEST_OLD_2'), 'test'); INSERT INTO requisite (course_id, group_number, requisite_type, required_course_id, source_reference) VALUES ((SELECT id FROM course WHERE code = 'TEST_OLD'), 2, 'course', (SELECT id FROM course WHERE code = 'TEST_NEW'), 'test'); ROLLBACK;"
+```
+
+`enrollment`, expected `ERROR:  enrollment course must match student bylaw`:
+
+```powershell
+psql -U grad_app -d grad_project -c "BEGIN; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_OLD', 'Test old course', 3, 'test' FROM bylaw WHERE code = 'old_cs'; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_NEW', 'Test new course', 3, 'test' FROM bylaw WHERE code = 'bylaw_2025'; INSERT INTO student (university_id, cohort_year, bylaw_id) SELECT 'TEST_STUDENT', 2020, id FROM bylaw WHERE code = 'old_cs'; INSERT INTO academic_term (academic_year, term_type) VALUES (2099, 'fall'); INSERT INTO enrollment (student_id, course_id, academic_term_id, status, attempt_state) VALUES ((SELECT id FROM student WHERE university_id = 'TEST_STUDENT'), (SELECT id FROM course WHERE code = 'TEST_OLD'), (SELECT id FROM academic_term WHERE academic_year = 2099 AND term_type = 'fall'), 'registered', 'active'); INSERT INTO enrollment (student_id, course_id, academic_term_id, status, attempt_state) VALUES ((SELECT id FROM student WHERE university_id = 'TEST_STUDENT'), (SELECT id FROM course WHERE code = 'TEST_NEW'), (SELECT id FROM academic_term WHERE academic_year = 2099 AND term_type = 'fall'), 'registered', 'active'); ROLLBACK;"
+```
+
+`plan_slot`, expected `ERROR:  plan_slot course must match plan_template bylaw`:
+
+```powershell
+psql -U grad_app -d grad_project -c "BEGIN; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_OLD', 'Test old course', 3, 'test' FROM bylaw WHERE code = 'old_cs'; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_NEW', 'Test new course', 3, 'test' FROM bylaw WHERE code = 'bylaw_2025'; INSERT INTO program (bylaw_id, code, name, source_reference) SELECT id, 'TEST_PRG', 'Test program', 'test' FROM bylaw WHERE code = 'old_cs'; INSERT INTO track (program_id, code, name, source_reference) SELECT id, 'TEST_TRK', 'Test track', 'test' FROM program WHERE code = 'TEST_PRG'; INSERT INTO plan_template (bylaw_id, program_id, track_id, english_path, math_path, source_sheet, source_reference) SELECT p.bylaw_id, p.id, t.id, 'intensive', 'precalculus', 'TEST_SHEET', 'test' FROM program p JOIN track t ON t.program_id = p.id WHERE p.code = 'TEST_PRG'; INSERT INTO plan_slot (plan_template_id, study_year, term_type, position, course_id, source_reference) VALUES ((SELECT id FROM plan_template WHERE source_sheet = 'TEST_SHEET'), 1, 'fall', 1, (SELECT id FROM course WHERE code = 'TEST_OLD'), 'test'); INSERT INTO plan_slot (plan_template_id, study_year, term_type, position, course_id, source_reference) VALUES ((SELECT id FROM plan_template WHERE source_sheet = 'TEST_SHEET'), 1, 'fall', 2, (SELECT id FROM course WHERE code = 'TEST_NEW'), 'test'); ROLLBACK;"
+```
+
+`elective_pool_course`, expected `ERROR:  elective_pool_course course must match elective_pool bylaw`:
+
+```powershell
+psql -U grad_app -d grad_project -c "BEGIN; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_OLD', 'Test old course', 3, 'test' FROM bylaw WHERE code = 'old_cs'; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_NEW', 'Test new course', 3, 'test' FROM bylaw WHERE code = 'bylaw_2025'; INSERT INTO elective_pool (bylaw_id, name, choose_count, source_reference) SELECT id, 'TEST_POOL', 1, 'test' FROM bylaw WHERE code = 'old_cs'; INSERT INTO elective_pool_course (elective_pool_id, course_id) VALUES ((SELECT id FROM elective_pool WHERE name = 'TEST_POOL'), (SELECT id FROM course WHERE code = 'TEST_OLD')); INSERT INTO elective_pool_course (elective_pool_id, course_id) VALUES ((SELECT id FROM elective_pool WHERE name = 'TEST_POOL'), (SELECT id FROM course WHERE code = 'TEST_NEW')); ROLLBACK;"
+```
+
+`course_equivalence`, expected `ERROR:  course_equivalence old_course must belong to the old_cs bylaw`:
+
+```powershell
+psql -U grad_app -d grad_project -c "BEGIN; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_OLD', 'Test old course', 3, 'test' FROM bylaw WHERE code = 'old_cs'; INSERT INTO course (bylaw_id, code, title, credits, source_reference) SELECT id, 'TEST_NEW', 'Test new course', 3, 'test' FROM bylaw WHERE code = 'bylaw_2025'; INSERT INTO course_equivalence (old_course_id, new_course_id, relation, source_reference) VALUES ((SELECT id FROM course WHERE code = 'TEST_OLD'), (SELECT id FROM course WHERE code = 'TEST_NEW'), 'related', 'test'); INSERT INTO course_equivalence (old_course_id, new_course_id, relation, source_reference) VALUES ((SELECT id FROM course WHERE code = 'TEST_NEW'), (SELECT id FROM course WHERE code = 'TEST_OLD'), 'related', 'test'); ROLLBACK;"
+```
+
+If a command prints `ROLLBACK` instead of `ERROR:`, the trigger did not fire.
+Tested: in all 5 tests the same-bylaw insert passed and the cross-bylaw insert raised the expected error; nothing was saved.
 
 ## Progress
 
 - [x] Task 1: CHECK constraints (55)
 - [x] Task 1: indexes (4)
 - [x] Task 1: tested (up, down, up)
-- [ ] Task 2: cross-bylaw triggers
+- [x] Task 2: cross-bylaw triggers (5)
+- [x] Task 2: tested
 
 ## Open questions (for Omar)
 
 - `forecast_line.rule_number`: §19 says "1 to 6", but not as a check, and an unresolved pair has no clear rule. Add `between 1 and 6`?
 - `enrollment_student_idx` is covered by the leading column of `enrollment_student_attempt_idx` and of the unique key. Keep it, as §15.4 lists it?
 - `enrollment.attempt_state` allows `not_started`, as §3 lists it, though the file never produces it. Keep it?
+- The triggers check the child row only (§15.3 lists only these 5). Changing `bylaw_id` later on `course`, `student`, `plan_template`, `elective_pool`, `standing_band` or `placement` is not re-checked. Add parent-side triggers, or keep that to seed and load review?
+- `course_equivalence` uses the fixed codes `old_cs` and `bylaw_2025`. §15.3 says "or the configured old code". Is a fixed code enough?
