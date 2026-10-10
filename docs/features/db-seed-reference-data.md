@@ -57,17 +57,18 @@ Run these after `npm run migrate:up` (the tables must exist first):
 
 ## Seed files
 
-| File                                     | Fills                                                                                     | Rows               | Status                                      |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------ | ------------------------------------------- |
-| `001_bylaw-layer.sql`                    | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement` | 2, 14, 2, 24, 5, 1 | Done, tested twice (no duplicates)          |
-| `002_programs-tracks-plan-templates.sql` | `program`, `track`, `plan_template`                                                       | 5, 6, 8            | Done, tested twice (no duplicates)          |
-| `003_data-gaps.sql`                      | `data_gap`                                                                                | 12                 | Done, tested twice (no duplicates)          |
-| `005_courses-2025.sql`                   | `course` (2025)                                                                           | 78                 | Done, tested twice (78 rows, no duplicates) |
+| File                                     | Fills                                                                                     | Rows               | Status                                       |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------ | -------------------------------------------- |
+| `001_bylaw-layer.sql`                    | `bylaw`, `credit_limit`, `grade_scale`, `grade_scale_entry`, `standing_band`, `placement` | 2, 14, 2, 24, 5, 1 | Done, tested twice (no duplicates)           |
+| `002_programs-tracks-plan-templates.sql` | `program`, `track`, `plan_template`                                                       | 5, 6, 8            | Done, tested twice (no duplicates)           |
+| `003_data-gaps.sql`                      | `data_gap`                                                                                | 12                 | Done, tested twice (no duplicates)           |
+| `005_courses-2025.sql`                   | `course` (2025)                                                                           | 78                 | Done, tested twice (78 rows, no duplicates)  |
+| `006_course-components-2025.sql`         | `course_component` (2025)                                                                 | 141                | Done, tested twice (141 rows, no duplicates) |
 
 ## Decisions
 
 - **Seeds are separate from migrations.** Seed files live in `seeds/` and run with `npm run db:seed`. Structure and data stay apart, and a wrong value can be fixed by editing the seed file and running it again.
-- **Seeds are safe to re-run (upsert).** Each INSERT uses `ON CONFLICT ... DO UPDATE` on the table's UNIQUE key. Running `npm run db:seed` again never creates duplicates; it updates existing rows so the database always matches the seed files. This is how a wrong value gets fixed: edit the seed file and run it again.
+- **Seeds are safe to re-run (upsert).** Each INSERT uses `ON CONFLICT ... DO UPDATE` on the table's UNIQUE key. Running `npm run db:seed` again never creates duplicates; it updates the rows each file lists, so those rows match the seed files. It never deletes: a row removed from a seed file stays in the database until it is deleted by hand. This is how a wrong value gets fixed: edit the seed file and run it again.
 - **No invented data.** Part A values come from `docs/database-design.md`. Part B values come only from the 3 source files (old bylaw PDF, 2025 bylaw PDF, 8-sheet study-plan workbook). The only exceptions are the clearly labelled placeholders below (2025 program names and track codes), which the doc does not give. Anything else that is missing stays out and is listed in Open questions or in `data_gap`.
 - **2025 program names are placeholders.** The design doc gives only the codes `AI`, `BMD`, and `CSEC`, so their `name` is the code itself until the full names are confirmed.
 - **Track codes are chosen by the team.** The design doc gives track names but no codes, so each code is a short lower-case version of the official name (for example `big_data` for "Big Data").
@@ -79,6 +80,12 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - **Course codes are normalised.** Spaces are trimmed, letters are uppercase, and there is exactly one space between the prefix and the number (for example `PHYS 101`). A letter suffix is kept, and the prefix is never rewritten (`CSC` stays `CSC`).
 - **Course flags follow fixed rules.** (`counts_toward_degree` / `counts_in_gpa` / `counts_toward_registration_cap`.) Ordinary courses and the senior projects (CSC 493, CSC 494): true / true / true. The 4 zero-credit courses (ENGL 001, ENGL 002, ENGL 003, MATH 120): false / false / true. Training (CSC 291, CSC 391): true / false / NULL. `min_students_to_open` and `max_attempts` stay NULL, also on a re-run.
 - **A course listed in several track lists is seeded once.** CSC 322, CSC 361, and AIS 303 appear in more than one track list in Article 36; each has one row. The check at the end of `005_courses-2025.sql` expects exactly 78 courses for the 2025 bylaw, so it must change when a later seed adds 2025 courses for the other programs.
+- **2025 course components come from the Article 36 hour columns.** `006_course-components-2025.sql` takes the Lecture, Tutorial, and Lab hours per week from the Article 36 course tables (pp.24-27). Every non-zero value is one row; a value of 0 gives no row. The result is 141 rows: 72 lecture, 16 tutorial, 53 lab. Each row uses the same `source_reference` as its course in `005_courses-2025.sql`.
+- **Lab kind follows the course prefix.** Labs of `PHYS` and `ECEN` courses are `physics_circuits` (PHYS 101, ECEN 111); every other lab is `computing`. Lectures and tutorials have no lab kind. This is a team rule (database-design.md §3), not bylaw text.
+- **`max_students` stays NULL.** No source states a class size, so every component row has NULL, also on a re-run.
+- **Training and senior projects have no component rows.** The p.28 table (CSC 291, CSC 391, CSC 493, CSC 494) has no Lecture, Tutorial, or Lab columns; it gives weekly student workload and number of weeks instead. So these 4 courses get no `course_component` row.
+- **The component check counts all 2025 components.** The check at the end of `006_course-components-2025.sql` expects exactly 141 rows for the 2025 bylaw (72 / 16 / 53), so it must change when a later seed adds components for other 2025 courses.
+- **A re-run of `006_course-components-2025.sql` never deletes components.** It updates the rows it lists and adds missing ones. If a component is later removed from the file (for example its hours become 0), its old row must be deleted by hand; the count check only compares totals, so it does not prove which rows exist.
 
 ## Progress
 
@@ -90,6 +97,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - [x] Part A done (seeds 001-003)
 - [ ] Part B (courses, requisites, plan slots, elective pools)
   - [x] 2025 courses (78)
+  - [x] 2025 course components (141)
 
 ## Open questions (for Omar)
 
@@ -99,3 +107,6 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - Is the registration-file import script part of my Phase 1 work, or only the seed data?
 - ENGL 002 and ENGL 003 are zero-credit but have contact hours. They are seeded like the other zero-credit courses (false / false / true). Is that right?
 - The 2025 bylaw p.28 heading says training and projects are "(10 credit hours)", but its 4 rows (3 credits each) add up to 12, and the Article 36 summary table says 6 + 6. Which is right? The seed uses the row values (3 each).
+- Four zero-credit courses have contact hours in Article 36: ENGL 001 (tutorial 10), ENGL 002 (tutorial 6), ENGL 003 (lecture 3), and MATH 120 (lecture 2, tutorial 2). Their component rows are seeded as printed. Is that right?
+- CSC 211 Logic Design has a 1-hour lab. By the prefix rule it is a `computing` lab (class size 30), although logic design is close to circuits work. Should it be `physics_circuits` (class size 15)?
+- Training and senior projects (CSC 291, CSC 391, CSC 493, CSC 494) have no component rows, because the p.28 table has no Lecture, Tutorial, or Lab columns. Is that right, or should they get rows from another source?
