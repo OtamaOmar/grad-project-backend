@@ -65,6 +65,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
 | `005_courses-2025.sql`                   | `course` (2025)                                                                           | 78                 | Done, tested twice (78 rows, no duplicates)  |
 | `006_course-components-2025.sql`         | `course_component` (2025)                                                                 | 141                | Done, tested twice (141 rows, no duplicates) |
 | `007_requisites-2025.sql`                | `requisite` (2025)                                                                        | 76                 | Done, tested twice (76 rows, no duplicates)  |
+| `008_courses-old.sql`                    | `course` (old)                                                                            | 58                 | Done, tested twice (58 rows, no duplicates)  |
 
 ## Decisions
 
@@ -92,6 +93,10 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - **Standing and certificate prerequisites.** "Junior Standing" (SSCI 301, CSC 391) and "Sophomore Standing" (CSC 291) point to the 2025 standing bands. "High School certificate (Math Section) or equivalent" (PHYS 101, MATH 121) and the certificate alternative of MATH 113 point to the `high_school_math` placement.
 - **Prerequisites with no place in the schema are not seeded.** 14 courses get no requisite row: ENGL 001 and ENGL 002 ("According to Univ. regulations"); HUMA 103, HUMA 111, HUMA 203, SSCI 101, SSCI 102, SSCI 203, SSCI 204, SSCI 205, CSC 101, and CSC 102 ("High School certificate or equivalent", which has no placement row); MATH 120 ("High School certificate (Science Section)", no placement row); and CSC 493 ("Completing 87 Credit Hours or more", which is not a standing band). They are listed in Open questions.
 - **`requisite` has no UNIQUE key, so 007 matches rows on all their data columns.** A row counts as the same when course, group number, type, and target are equal. A re-run refreshes `source_reference` on those rows and inserts only missing ones; it never deletes. To fix a wrong course, group, type, or target, delete the old row by hand and run the seed again: editing the file alone adds a new row next to the old one, and the count check then fails and rolls the file back. The check at the end of the file expects exactly 76 rows for the 2025 bylaw (70 / 3 / 3) and no duplicates; it compares totals, so it does not prove which rows exist. Without a UNIQUE key, "no duplicates" also assumes two seed runs never overlap (`npm run db:seed` runs one file at a time). The count must change when a later seed adds 2025 requisites.
+- **Old courses come from the course tables of the old bylaw PDF.** `008_courses-old.sql` takes code, title, and credits from the course tables of `CS Old Bylaws.pdf` (pp.19-23). Where the sample study plans (pp.27-31) or the course descriptions (pp.33-42) disagree, the course tables win. The result is 58 courses; each `source_reference` is "Old CS bylaw course tables, p.NN" (CSCI 459 is pp.22-23). With these credits the required courses add up to 120 credits; with the 3-credit general-education elective and 12 credits of Computer Science electives, that is the 135-credit total.
+- **Old course flags.** Ordinary courses, including the senior projects CSCI 495 and CSCI 496: true / true / true. ENGL 100 Intensive English (0 credits): false / false / true, like the other zero-credit courses. COMM 401 and CSCI 490 (internship and training): true / true / NULL, as database-design.md §3 states for the old internship courses. `min_students_to_open` and `max_attempts` stay NULL, also on a re-run.
+- **What the old course seed leaves out.** MATH 001 (its credits conflict, see Open questions); CSCI 105, CSCI 221L, and MATH 302, which are not in the course tables (they appear in the sample study plans, and CSCI 221L also has a description on p.37); codes that exist only in the study-plan workbook (CSCI 102, CSCI 112, CSCI 208, CSCI 305, ECEN 101C, ENGL 001, MATH 100, PHYS 101C, SSCI 105); the former codes printed in brackets under some courses (for example "(CSCE 101)", "(ECEN 203)"); and the "NSCI, SSCI, or HUMA" elective line, which is not a course.
+- **Old courses listed in several tables are seeded once.** CSCI 451, 452, 455, 456, 457, 458, 461, 462, 464, 465, and 467 appear in the general elective table and in a track table; their credits agree, and each has one row. CSCI 459 and CSCI 469 are seeded as courses; keeping them out of elective pools is a later task. The check at the end of `008_courses-old.sql` expects exactly 58 courses for the old bylaw, so it must change when a later seed adds old courses.
 
 ## Progress
 
@@ -105,6 +110,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
   - [x] 2025 courses (78)
   - [x] 2025 course components (141)
   - [x] 2025 requisites (76)
+  - [x] Old courses (58)
 
 ## Open questions (for Omar)
 
@@ -123,3 +129,10 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - CSC 493 requires "Completing 87 Credit Hours or more" (p.28). 87 is not a 2025 standing band (27 / 62 / 96), so no row is seeded. How should it be stored?
 - AIS 201 and CSC 456 separate their two prerequisites with a comma (pp.25, 27). They are seeded as AND, like "and". Is that right?
 - `requisite` has no UNIQUE constraint, so `007_requisites-2025.sql` matches rows on all their columns. Should a migration add a unique key (for example on course, group, type, and target)?
+- MATH 001 Pre-Calculus Mathematics shows 3 credits in the old course table (p.20) but "0 CH" in its course description (p.33). It is not seeded. Which value is right?
+- CSCI 322 Data Analysis has 3 credits in the course table (p.21) but 4 in its description (p.38) and in the sample study plan (p.28). It is seeded with 3. Is that right?
+- CSCI 490 Industrial/Research Training has 2 credits in the course table (p.21) and the study plan (p.28) but 1 in its description (p.38). It is seeded with 2. Is that right?
+- ENGL 100 Intensive English (0 credits, p.19) is seeded with the zero-credit flags (false / false / true). database-design.md §3 names the old zero-credit courses ENGL 001 and Math 100, which are workbook codes. Is ENGL 100 the same kind of course?
+- The study plan (pp.27-28) uses CSCI 105 Introduction to Programming and splits Logic Design into CSCI 221 (3) and CSCI 221L Logic Design Lab (1); the course table has CSCI 201 Introduction to Programming and CSCI 221 Logic Design (4). The seed follows the table. Is CSCI 105 the same course as CSCI 201?
+- The Big Data study plan (p.29) names MATH 302 as a prerequisite of CSCI 467, but MATH 302 is not in the course tables. It is not seeded. What is MATH 302?
+- The old course tables also give weekly hours (Lecture and Section/Lab, pp.19-23), some of them fractional (for example 12.5, 2.5, 1.5) or with both a section and a lab. `course_component.weekly_contact_hours` is an integer, so a later components task must decide how to store them.
