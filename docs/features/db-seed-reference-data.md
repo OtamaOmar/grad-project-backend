@@ -64,11 +64,12 @@ Run these after `npm run migrate:up` (the tables must exist first):
 | `003_data-gaps.sql`                      | `data_gap`                                                                                | 12                 | Done, tested twice (no duplicates)           |
 | `005_courses-2025.sql`                   | `course` (2025)                                                                           | 78                 | Done, tested twice (78 rows, no duplicates)  |
 | `006_course-components-2025.sql`         | `course_component` (2025)                                                                 | 141                | Done, tested twice (141 rows, no duplicates) |
+| `007_requisites-2025.sql`                | `requisite` (2025)                                                                        | 76                 | Done, tested twice (76 rows, no duplicates)  |
 
 ## Decisions
 
 - **Seeds are separate from migrations.** Seed files live in `seeds/` and run with `npm run db:seed`. Structure and data stay apart, and a wrong value can be fixed by editing the seed file and running it again.
-- **Seeds are safe to re-run (upsert).** Each INSERT uses `ON CONFLICT ... DO UPDATE` on the table's UNIQUE key. Running `npm run db:seed` again never creates duplicates; it updates the rows each file lists, so those rows match the seed files. It never deletes: a row removed from a seed file stays in the database until it is deleted by hand. This is how a wrong value gets fixed: edit the seed file and run it again.
+- **Seeds are safe to re-run (upsert).** Each INSERT uses `ON CONFLICT ... DO UPDATE` on the table's UNIQUE key; the two tables without one, `data_gap` and `requisite`, match rows another way (see their notes below). Running `npm run db:seed` again never creates duplicates; it updates the rows each file lists, so those rows match the seed files. It never deletes: a row removed from a seed file stays in the database until it is deleted by hand. This is how a wrong value gets fixed: edit the seed file and run it again (for `requisite`, see the 007 note).
 - **No invented data.** Part A values come from `docs/database-design.md`. Part B values come only from the 3 source files (old bylaw PDF, 2025 bylaw PDF, 8-sheet study-plan workbook). The only exceptions are the clearly labelled placeholders below (2025 program names and track codes), which the doc does not give. Anything else that is missing stays out and is listed in Open questions or in `data_gap`.
 - **2025 program names are placeholders.** The design doc gives only the codes `AI`, `BMD`, and `CSEC`, so their `name` is the code itself until the full names are confirmed.
 - **Track codes are chosen by the team.** The design doc gives track names but no codes, so each code is a short lower-case version of the official name (for example `big_data` for "Big Data").
@@ -86,6 +87,11 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - **Training and senior projects have no component rows.** The p.28 table (CSC 291, CSC 391, CSC 493, CSC 494) has no Lecture, Tutorial, or Lab columns; it gives weekly student workload and number of weeks instead. So these 4 courses get no `course_component` row.
 - **The component check counts all 2025 components.** The check at the end of `006_course-components-2025.sql` expects exactly 141 rows for the 2025 bylaw (72 / 16 / 53), so it must change when a later seed adds components for other 2025 courses.
 - **A re-run of `006_course-components-2025.sql` never deletes components.** It updates the rows it lists and adds missing ones. If a component is later removed from the file (for example its hours become 0), its old row must be deleted by hand; the count check only compares totals, so it does not prove which rows exist.
+- **2025 requisites come from the Article 36 Prerequisite column.** `007_requisites-2025.sql` reads the Prerequisite column of the Article 36 course tables (pp.24-28). The result is 76 rows: 70 course, 3 standing, 3 placement, for 64 of the 78 courses. Each row's `source_reference` is its course's reference in `005_courses-2025.sql` plus ", prerequisite".
+- **AND and OR use `group_number`.** Rows with the same group number are AND; different group numbers are OR. "A and B" and "A, B" give one group with two rows. MATH 113 ("MATH 120 ... or High School certificate (Math) or equivalent") gives two groups: group 1 is MATH 120, group 2 is the `high_school_math` placement. No cell mixes AND and OR, and Article 36 has no co-requisites (the schema has no co-requisite type either).
+- **Standing and certificate prerequisites.** "Junior Standing" (SSCI 301, CSC 391) and "Sophomore Standing" (CSC 291) point to the 2025 standing bands. "High School certificate (Math Section) or equivalent" (PHYS 101, MATH 121) and the certificate alternative of MATH 113 point to the `high_school_math` placement.
+- **Prerequisites with no place in the schema are not seeded.** 14 courses get no requisite row: ENGL 001 and ENGL 002 ("According to Univ. regulations"); HUMA 103, HUMA 111, HUMA 203, SSCI 101, SSCI 102, SSCI 203, SSCI 204, SSCI 205, CSC 101, and CSC 102 ("High School certificate or equivalent", which has no placement row); MATH 120 ("High School certificate (Science Section)", no placement row); and CSC 493 ("Completing 87 Credit Hours or more", which is not a standing band). They are listed in Open questions.
+- **`requisite` has no UNIQUE key, so 007 matches rows on all their data columns.** A row counts as the same when course, group number, type, and target are equal. A re-run refreshes `source_reference` on those rows and inserts only missing ones; it never deletes. To fix a wrong course, group, type, or target, delete the old row by hand and run the seed again: editing the file alone adds a new row next to the old one, and the count check then fails and rolls the file back. The check at the end of the file expects exactly 76 rows for the 2025 bylaw (70 / 3 / 3) and no duplicates; it compares totals, so it does not prove which rows exist. Without a UNIQUE key, "no duplicates" also assumes two seed runs never overlap (`npm run db:seed` runs one file at a time). The count must change when a later seed adds 2025 requisites.
 
 ## Progress
 
@@ -98,6 +104,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - [ ] Part B (courses, requisites, plan slots, elective pools)
   - [x] 2025 courses (78)
   - [x] 2025 course components (141)
+  - [x] 2025 requisites (76)
 
 ## Open questions (for Omar)
 
@@ -110,3 +117,9 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - Four zero-credit courses have contact hours in Article 36: ENGL 001 (tutorial 10), ENGL 002 (tutorial 6), ENGL 003 (lecture 3), and MATH 120 (lecture 2, tutorial 2). Their component rows are seeded as printed. Is that right?
 - CSC 211 Logic Design has a 1-hour lab. By the prefix rule it is a `computing` lab (class size 30), although logic design is close to circuits work. Should it be `physics_circuits` (class size 15)?
 - Training and senior projects (CSC 291, CSC 391, CSC 493, CSC 494) have no component rows, because the p.28 table has no Lecture, Tutorial, or Lab columns. Is that right, or should they get rows from another source?
+- Ten 2025 courses list "High School certificate or equivalent" as their prerequisite (HUMA 103, HUMA 111, HUMA 203, SSCI 101, SSCI 102, SSCI 203, SSCI 204, SSCI 205, CSC 101, CSC 102; pp.24-25). There is no placement row for it, so no row is seeded. Should it be a placement row instead?
+- MATH 120 requires "High School certificate (Science Section)" (p.24). There is no placement row for it, so no row is seeded. Should one be added?
+- ENGL 001 and ENGL 002 say "According to Univ. regulations" (p.24). Which regulation is meant, and can it be stored?
+- CSC 493 requires "Completing 87 Credit Hours or more" (p.28). 87 is not a 2025 standing band (27 / 62 / 96), so no row is seeded. How should it be stored?
+- AIS 201 and CSC 456 separate their two prerequisites with a comma (pp.25, 27). They are seeded as AND, like "and". Is that right?
+- `requisite` has no UNIQUE constraint, so `007_requisites-2025.sql` matches rows on all their columns. Should a migration add a unique key (for example on course, group, type, and target)?
