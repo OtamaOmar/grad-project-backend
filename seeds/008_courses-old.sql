@@ -1,4 +1,5 @@
--- course (old bylaw, Computer Science, course tables of the old bylaw PDF)
+-- course (old bylaw, Computer Science, course tables of the old bylaw PDF;
+-- CSCI 112 only from the study-plan workbook, by owner decision)
 INSERT INTO course (
   bylaw_id,
   code,
@@ -42,6 +43,7 @@ FROM (VALUES
   ('old_cs', 'MATH 203', 'Differential Equations', 4, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'MATH 301', 'Linear Algebra', 4, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 101', 'Computer & Information Skills', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
+  ('old_cs', 'CSCI 112', 'Intermediate Programming', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H8:J8'),
   ('old_cs', 'CSCI 201', 'Introduction to Programming', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 205', 'Introduction to Computer Systems', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 207', 'Fundamentals of Data Structures & Algorithms', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
@@ -90,7 +92,7 @@ ON CONFLICT (bylaw_id, code) DO UPDATE SET
   max_attempts = NULL,
   updated_at = now();
 
--- check: 58 courses for the old bylaw, no code with leading/trailing spaces
+-- check: 59 courses for the old bylaw, no code with leading/trailing spaces
 DO $$
 DECLARE
   course_count integer;
@@ -107,8 +109,8 @@ BEGIN
   WHERE b.code = 'old_cs'
     AND c.code <> btrim(c.code);
 
-  IF course_count <> 58 THEN
-    RAISE EXCEPTION 'Expected 58 old_cs courses, found %', course_count;
+  IF course_count <> 59 THEN
+    RAISE EXCEPTION 'Expected 59 old_cs courses, found %', course_count;
   END IF;
 
   IF bad_code_count > 0 THEN
