@@ -3,7 +3,7 @@
 **Branch:** feature/academic-data-management (Part A was replayed here from feature/db-seed-reference-data; that old branch is left behind.)
 **Owner:** Kamel (Backend A)
 **Phase:** 1 – Foundations (Excel plan: "Seeds and imports")
-**Status:** Part A done. Part B in progress.
+**Status:** Part A done. Part B done for this PR; plan slots move to a follow-up branch (Omar's Option B, 2026-10-15).
 **Depends on:** main at 67bff52 (schema + integrity merged).
 
 ## Goal
@@ -19,9 +19,10 @@ Fill the reference tables with the official data from `docs/database-design.md`,
 - `plan_template` (the 8 template headers only, no slots)
 - `data_gap` (the 12 open gaps of database-design.md §14)
 
-**Part B (in progress): data from the 3 source files**
+**Part B (done in this PR, except `plan_slot`): data from the 3 source files**
 
-- `course`, `course_component`, `requisite`, `plan_slot`, `elective_pool`, `elective_pool_course`
+- `course`, `course_component`, `requisite`, `elective_pool`, `elective_pool_course`, `data_gap`
+- `plan_slot`: moved to the follow-up branch (see Decisions)
 - Sources: the old bylaw PDF, the 2025 bylaw PDF, and the 8-sheet study-plan workbook.
 
 **Out of scope**
@@ -116,6 +117,9 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - **Pools are matched on bylaw, track, and name.** `elective_pool` has no UNIQUE key, so `010_elective-pools.sql` matches a pool on bylaw, track, and name, updates its `choose_count` and `source_reference` on a match, and inserts it otherwise. So a changed choose count in the file updates the existing pool on the next run instead of adding a second one. Members are linked by pool name and course code (`elective_pool_course` has a primary key, so a re-run adds nothing). A member's course is looked up in the pool's own bylaw. To change a pool's bylaw, track, or name, delete the old pool and its members by hand first; otherwise a new pool is added next to the old one and the count check fails and rolls the file back. A member removed from the file also stays until it is deleted by hand. The check at the end of the file expects exactly 2 old pools with 7 members and 6 2025 pools with 35 members, no pool name twice in a bylaw, no pool without members, and CSCI 459 and CSCI 469 in no pool; it compares totals, so it does not prove which rows exist.
 - **Part B data gaps come from the open points of Tasks 1-6.** `011_data-gaps-part-b.sql` adds 48 open `data_gap` rows: the 28 prerequisite conflicts, `old_sheet_only_csci_112`, `old_track_elective_count`, and 18 more unresolved points from Tasks 1-6 (most of them are marked "Tracked as data gap" in Open questions; `old_sheet_only_codes` lists the 8 other workbook-only codes from the old course notes). Each row names the source pages or sheet cells and says what is seeded now. It uses the same pattern as 003: it updates rows whose category already exists, inserts only missing ones as `open`, and never changes `status`. The check at the end of the file expects exactly 28 conflict rows, 2 required rows, and 18 other Part B rows by category, and no category twice in `data_gap`.
 - **Two rows of 003 are corrected.** `old_weekly_hours` said only that the spreadsheet has no lecture, tutorial, or lab hours, which read as if no old source had them; the old PDF course tables do have them (pp.19-23), some fractional (for example ENGL 100 lecture 12.5) and some with both a section and a lab. The row keeps its category; its description and `source_reference` now say this. Old courses still get no component rows. In the same file, `project_management_code` said both SSCI 301 and SSCI 105 are course rows; now it says that SSCI 105 is a workbook-only code that is not seeded (H42 on all 8 sheets), and that SSCI 301 is a course row of the 2025 bylaw only (Art. 36, p.24); its notes are corrected too.
+- **This PR stops before plan slots (Omar's Option B, 2026-10-15).** The PR keeps everything as it is: the 8 `plan_template` rows have no slots, the 8 elective pools are not attached to any slot, and CSCI 112 and CSCI 207 -> CSCI 112 stay. Plan templates and plan slots are not filled in this PR, and forecast work does not start from this merge.
+- **The follow-up branch adds the plan slots.** It is cut from main after this PR is squash-merged, and it adds only: the 8 sheet-only courses (CSCI 102, CSCI 208, CSCI 305, ECEN 101C, ENGL 001, MATH 100, PHYS 101C, SSCI 105), seeded like CSCI 112 from their sheet cells (ENGL 001 and MATH 100 with false / false / true, the others NULL; SSCI 105 fills the sheet slots and SSCI 301 stays a separate 2025 course); the plan slots of the 8 templates; the links from the Technical Elective slots to the old pools; the seed checks (CSCI 207 -> CSCI 112, and Science_Intensive_bigdata year 2 fall = 19 credits including ECEN 101C); and 2 new open data gaps. The first gap is the sheet-code vs table-code pairs CSCI 304 / CSCI 208, CSCI 201 / CSCI 102, CSCI 404 / CSCI 305, PHYS 101 / PHYS 101C, and ECEN 101 / ECEN 101C: seed 009 stays as the table wrote it, with no OR group and no `course_equivalence` row; a requisite in this gap is unresolved (`prerequisite_code_conflict`), so p is null and the student stays out of the headcount; it is not "prerequisite failed". The second gap is NSCI 102, printed twice (B30 and B43) on Science_ENGL1_Media and Math_ENGL1_Media: both slots are seeded, the sheet sums to 138 instead of 135, and which cell is the extra one is unknown. `old_sheet_only_codes` stays open, with a note that these rows exist, are not in the bylaw course table, and come from the sheet.
+- **Forecast work waits for the follow-up.** `feature/database-forecast-support` starts only after the follow-up branch is merged.
 
 ## Progress
 
@@ -125,7 +129,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - [x] Programs, tracks, and plan template headers
 - [x] Data gaps
 - [x] Part A done (seeds 001-003)
-- [ ] Part B (courses, requisites, plan slots, elective pools)
+- [x] Part B for this PR (courses, requisites, elective pools, data gaps)
   - [x] 2025 courses (78)
   - [x] 2025 course components (141)
   - [x] 2025 requisites (76)
@@ -133,6 +137,8 @@ Run these after `npm run migrate:up` (the tables must exist first):
   - [x] Old requisites (44)
   - [x] Elective pools (8 pools, 42 members)
   - [x] Part B data gaps (48)
+  - Plan slots: moved to the follow-up branch (Option B)
+- [ ] Follow-up branch: the 8 sheet-only courses, plan slots, pool links, seed checks, 2 new data gaps
 
 ## Open questions (for Omar)
 
