@@ -1,5 +1,5 @@
 -- course (old bylaw, Computer Science, course tables of the old bylaw PDF;
--- CSCI 112 only from the study-plan workbook, by owner decision)
+-- CSCI 112 and 8 more sheet-only codes only from the study-plan workbook, by owner decision)
 INSERT INTO course (
   bylaw_id,
   code,
@@ -44,6 +44,14 @@ FROM (VALUES
   ('old_cs', 'MATH 301', 'Linear Algebra', 4, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 101', 'Computer & Information Skills', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 112', 'Intermediate Programming', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H8:J8'),
+  ('old_cs', 'CSCI 102', 'Introduction to Programming', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B8:D8'),
+  ('old_cs', 'CSCI 208', 'Analysis Design of Algorithms', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H18:J18'),
+  ('old_cs', 'CSCI 305', 'Database Systems', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H28:J28'),
+  ('old_cs', 'ECEN 101C', 'Electric Circuits', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B16:D16'),
+  ('old_cs', 'ENGL 001', 'Intensive English', 0, false, false, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B6:D6'),
+  ('old_cs', 'MATH 100', 'Pre-calculus', 0, false, false, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B7:D7'),
+  ('old_cs', 'PHYS 101C', 'Physics I', 4, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H6:J6'),
+  ('old_cs', 'SSCI 105', 'Selected Topics in Social Sciences-Project Managemen', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H42:J42'),
   ('old_cs', 'CSCI 201', 'Introduction to Programming', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 205', 'Introduction to Computer Systems', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 207', 'Fundamentals of Data Structures & Algorithms', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
@@ -92,7 +100,7 @@ ON CONFLICT (bylaw_id, code) DO UPDATE SET
   max_attempts = NULL,
   updated_at = now();
 
--- check: 59 courses for the old bylaw, no code with leading/trailing spaces
+-- check: 67 courses for the old bylaw, no code with leading/trailing spaces
 DO $$
 DECLARE
   course_count integer;
@@ -109,8 +117,8 @@ BEGIN
   WHERE b.code = 'old_cs'
     AND c.code <> btrim(c.code);
 
-  IF course_count <> 59 THEN
-    RAISE EXCEPTION 'Expected 59 old_cs courses, found %', course_count;
+  IF course_count <> 67 THEN
+    RAISE EXCEPTION 'Expected 67 old_cs courses, found %', course_count;
   END IF;
 
   IF bad_code_count > 0 THEN
