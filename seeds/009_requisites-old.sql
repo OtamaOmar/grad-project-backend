@@ -1,5 +1,5 @@
 -- requisite (old bylaw, Prerequisite column of the old course tables;
--- CSCI 207 -> CSCI 112 only from the study-plan workbook, by owner decision)
+-- CSCI 207 -> CSCI 112 and the rows of the sheet-only courses only from the study-plan workbook, by owner decision)
 -- requisite has no UNIQUE key, so a row is matched on all its data columns:
 -- existing matches get their source_reference refreshed, missing rows are inserted.
 WITH v (bylaw_code, course_code, group_number, requisite_type, required_course_code, standing_level, placement_code, source_reference) AS (
@@ -14,6 +14,11 @@ WITH v (bylaw_code, course_code, group_number, requisite_type, required_course_c
   ('old_cs', 'MATH 211', 1, 'course', 'MATH 111', NULL, NULL, 'Old CS bylaw course tables, p.20, prerequisite'),
   ('old_cs', 'MATH 203', 1, 'course', 'MATH 112', NULL, NULL, 'Old CS bylaw course tables, p.20, prerequisite'),
   ('old_cs', 'MATH 301', 1, 'course', 'MATH 203', NULL, NULL, 'Old CS bylaw course tables, p.20, prerequisite'),
+  ('old_cs', 'CSCI 112', 1, 'course', 'CSCI 102', NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, K8, prerequisite'),
+  ('old_cs', 'CSCI 208', 1, 'course', 'CSCI 207', NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, K18, prerequisite'),
+  ('old_cs', 'CSCI 208', 1, 'course', 'MATH 211', NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, K18, prerequisite'),
+  ('old_cs', 'CSCI 305', 1, 'course', 'CSCI 217', NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, K28, prerequisite'),
+  ('old_cs', 'ECEN 101C', 1, 'course', 'PHYS 101C', NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, E16, prerequisite'),
   ('old_cs', 'CSCI 205', 1, 'course', 'CSCI 201', NULL, NULL, 'Old CS bylaw course tables, p.20, prerequisite'),
   ('old_cs', 'CSCI 207', 1, 'course', 'CSCI 112', NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, E20, prerequisite'),
   ('old_cs', 'CSCI 217', 1, 'course', 'CSCI 207', NULL, NULL, 'Old CS bylaw course tables, p.20, prerequisite'),
@@ -106,7 +111,7 @@ WHERE NOT EXISTS (
     AND r.placement_id IS NOT DISTINCT FROM x.placement_id
 );
 
--- check: 44 requisites for the old bylaw (43 course, 1 standing, 0 placement), no duplicates
+-- check: 49 requisites for the old bylaw (48 course, 1 standing, 0 placement), no duplicates
 DO $$
 DECLARE
   total_count integer;
@@ -137,8 +142,8 @@ BEGIN
     HAVING count(*) > 1
   ) d;
 
-  IF total_count <> 44 OR course_count <> 43 OR standing_count <> 1 OR placement_count <> 0 THEN
-    RAISE EXCEPTION 'Expected 44 old_cs requisites (43 course, 1 standing, 0 placement), found % (% course, % standing, % placement)',
+  IF total_count <> 49 OR course_count <> 48 OR standing_count <> 1 OR placement_count <> 0 THEN
+    RAISE EXCEPTION 'Expected 49 old_cs requisites (48 course, 1 standing, 0 placement), found % (% course, % standing, % placement)',
       total_count, course_count, standing_count, placement_count;
   END IF;
 
