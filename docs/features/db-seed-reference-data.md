@@ -3,7 +3,7 @@
 **Branch:** feature/academic-data-plan-slots, the plan-slots follow-up, cut from main at 8709495 after PR #3 (Part A and Part B were merged from feature/academic-data-management; Part A had been replayed there from feature/db-seed-reference-data).
 **Owner:** Kamel (Backend A)
 **Phase:** 1 – Foundations (Excel plan: "Seeds and imports")
-**Status:** Part A and Part B done (PR #3). Follow-up in progress: the 8 sheet-only courses, plan slots, pool links, and 2 data gaps.
+**Status:** Part A and Part B merged (PR #3); the plan-slots follow-up merged (PR #4). Audit cleanup on `fix/db-audit-cleanup`: PDF citations in seeds 001-003, the 2025 program names, 3 reworded gaps, and 2 new gaps (014).
 **Depends on:** main at 67bff52 (schema + integrity merged).
 
 ## Goal
@@ -32,12 +32,12 @@ Fill the reference tables with the official data from `docs/database-design.md`,
 
 ## Related features (Backend A)
 
-| #   | Feature                   | Phase | Branch                             | Notes file                                            |
-| --- | ------------------------- | ----- | ---------------------------------- | ----------------------------------------------------- |
-| 1   | Database schema           | 1     | `feature/db-schema`                | `docs/features/db-schema.md`                          |
-| 2   | Seeds and imports         | 1     | `feature/academic-data-management` | `docs/features/db-seed-reference-data.md` (this file) |
-| 3   | Database integrity        | 2     | TBC with Omar                      | `docs/features/db-integrity.md`                       |
-| 4   | Database forecast support | 2     | TBC with Omar                      | `docs/features/db-forecast-support.md`                |
+| #   | Feature                   | Phase | Branch                              | Notes file                                            |
+| --- | ------------------------- | ----- | ----------------------------------- | ----------------------------------------------------- |
+| 1   | Database schema           | 1     | `feature/db-schema`                 | `docs/features/db-schema.md`                          |
+| 2   | Seeds and imports         | 1     | `feature/academic-data-management`  | `docs/features/db-seed-reference-data.md` (this file) |
+| 3   | Database integrity        | 2     | `feature/database-integrity`        | `docs/features/db-integrity.md`                       |
+| 4   | Database forecast support | 2     | `feature/database-forecast-support` | `docs/features/db-forecast-support.md`                |
 
 ## What are seeds? (simple explanation)
 
@@ -72,15 +72,16 @@ Run these after `npm run migrate:up` (the tables must exist first):
 | `011_data-gaps-part-b.sql`               | `data_gap` (Part B)                                                                       | 48                 | Done; 3 rows reworded, tested twice           |
 | `012_plan-slots.sql`                     | `plan_slot`                                                                               | 362                | Done, tested twice (362 slots, no duplicates) |
 | `013_data-gaps-plan-slots.sql`           | `data_gap` (plan slots)                                                                   | 2                  | Done, tested twice (2 rows, no duplicates)    |
+| `014_data-gaps-audit.sql`                | `data_gap` (audit)                                                                        | 2                  | Added by the audit cleanup                    |
 
 ## Decisions
 
 - **Seeds are separate from migrations.** Seed files live in `seeds/` and run with `npm run db:seed`. Structure and data stay apart, and a wrong value can be fixed by editing the seed file and running it again.
 - **Seeds are safe to re-run (upsert).** Each INSERT uses `ON CONFLICT ... DO UPDATE` on the table's UNIQUE key; the three tables without one, `data_gap`, `requisite`, and `elective_pool`, match rows another way (see their notes below), and `elective_pool_course` uses `ON CONFLICT ... DO NOTHING` on its primary key. Running `npm run db:seed` again never creates duplicates; it updates the rows each file lists, so those rows match the seed files. It never deletes: a row removed from a seed file stays in the database until it is deleted by hand. This is how a wrong value gets fixed: edit the seed file and run it again (for `requisite` and `elective_pool`, see the 007 and 010 notes).
-- **No invented data.** Part A values come from `docs/database-design.md`. Part B values come only from the 3 source files (old bylaw PDF, 2025 bylaw PDF, 8-sheet study-plan workbook). The only exceptions are the clearly labelled placeholders below (2025 program names and track codes), which the doc does not give. Anything else that is missing stays out and is listed in Open questions or in `data_gap`.
-- **2025 program names are placeholders.** The design doc gives only the codes `AI`, `BMD`, and `CSEC`, so their `name` is the code itself until the full names are confirmed.
+- **No invented data.** Part A values come from `docs/database-design.md`. Part B values come only from the 3 source files (old bylaw PDF, 2025 bylaw PDF, 8-sheet study-plan workbook). The only exception is the clearly labelled team-chosen track codes below, which the doc does not give. Anything else that is missing stays out and is listed in Open questions or in `data_gap`.
+- **2025 program names come from Article 3.** `AI`, `BMD`, and `CSEC` are named Artificial Intelligence, Biomedical Informatics, and Cybersecurity (2025 bylaw Art. 3, p.7). They are names only: no plans, no tracks, and no students from those programs in the forecast; only Computer Science is forecast (Omar, 2026-10-17).
 - **Track codes are chosen by the team.** The design doc gives track names but no codes, so each code is a short lower-case version of the official name (for example `big_data` for "Big Data").
-- **Grade scales are not yet checked against the PDFs.** They are seeded from database-design.md §3, which says to re-check them against the bylaw PDFs and that the PDF wins if they disagree.
+- **Grade scales are checked against the PDFs.** Both scales match the bylaw PDFs (old Art. 21, p.13; 2025 Art. 17, pp.12-13, with D and F on p.13), and seed 001 cites those pages.
 - **Rows are linked by code, never by id.** Ids are generated by PostgreSQL, so seed files find parent rows by their code (for example the bylaw with code `old_cs`).
 - **The old bylaw's "general Computer Science path" is not seeded as a track.** database-design.md §3 says it "can be a track row" but it has no plan template, so it was left out to avoid guessing. It can be added later if the team wants it.
 - **Data gaps use `category` as their key.** `data_gap` has no UNIQUE constraint, so `003_data-gaps.sql` first updates gaps whose category already exists, then inserts only missing ones. It never changes `status`, so a gap marked `resolved` stays resolved when the seed runs again.
@@ -127,6 +128,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - **The follow-up adds the 8 courses and their requisites to 008 and 009.** New files would break the counts: the checks of 008 and 009 count all old courses and all old requisites, so they now expect 67 and 49. The other new rows are in new files 012 and 013.
 - **Plan slots come from the 8 study-plan sheets.** `012_plan-slots.sql` seeds one slot per filled box: 362 slots, 354 courses and 8 pool links (46, 46, 46, 45, 45, 45, 45, and 44 per template, in the order of seed 002). The position is the printed "#", or the box's order in its term where no "#" is printed (HUMA 103 and HUMA 101 on the 2 Science_Intensive sheets). Each "Technical Elective" box (H41) points to its track's pool from `010_elective-pools.sql`. The 8 "XXXX XXX" general-education boxes get no slot, because that pool is not seeded (data gap `old_gen_ed_elective_pool`). Both NSCI 102 boxes on Science_ENGL1_Media and Math_ENGL1_Media are seeded (data gap `old_plan_nsci_102_twice`). A re-run upserts on the slot's UNIQUE key (template, year, term, position). The check at the end expects the 362 slots and each template's count, CSCI 207 -> CSCI 112, Science_Intensive_bigdata year 2 fall = 19 credits including ECEN 101C, and, for every term, that the seeded courses' credits plus the printed credits of its elective boxes equal the printed term total.
 - **Plan-slot data gaps.** `013_data-gaps-plan-slots.sql` adds 2 open gaps with the 003 pattern: `old_sheet_vs_table_codes` (the tables name CSCI 304, CSCI 201, CSCI 404, PHYS 101, and ECEN 101, the sheets place CSCI 208, CSCI 102, CSCI 305, PHYS 101C, and ECEN 101C, and nobody has confirmed the pairs; 009 stays as the table wrote it, with no OR group and no `course_equivalence` row; such a requisite is unresolved (`prerequisite_code_conflict`): p is null and the student stays out of the headcount, not "prerequisite failed") and `old_plan_nsci_102_twice`. Its check expects the 2 gaps once each and no category twice. Rows whose text the follow-up made untrue are reworded in their own files, so each row keeps one owner: `project_management_code` in 003, and `old_sheet_only_csci_112`, `old_sheet_only_codes` (these rows exist, they are not in the bylaw course table, and the sheet is the source), and `old_gen_ed_elective_pool` in 011.
+- **Audit cleanup (`fix/db-audit-cleanup`, Omar 2026-10-17).** Seeds 001-003 cite the bylaw PDF article and page, or the workbook sheet, instead of database-design.md; where the point is an absence, the gap says "No source states this". The 2025 program names come from Art. 3, p.7. Three 003 rows are reworded: `repeat_after_w_or_inc` (old Art. 20, p.13; 2025 Art. 13, pp.10-11; withdrawn and incomplete courses can be taken again next term), `project_management_code` (the SSCI 301 claim is cited as the track images, a team copy not in source-files), and `old_senior_threshold` (the old plan and course table print no number; the threshold is decided by the team and applied in a later branch). `014_data-gaps-audit.sql` adds 2 open gaps with the 013 pattern: `old_senior_standing_course` (CSCI 490 in the table vs CSCI 495 on the sheet) and `credit_cap_low_gpa_vs_graduating` (2025 Art. 10, p.9 does not order the 12-credit cap and the 21-credit graduating allowance). Its check expects the 2 gaps once each and no category twice. `data_gap` now has 64 rows (12 + 48 + 2 + 2).
 
 ## Progress
 
@@ -154,8 +156,6 @@ Run these after `npm run migrate:up` (the tables must exist first):
 
 ## Open questions (for Omar)
 
-- The grade scales must still be re-checked against the bylaw PDFs (database-design.md §3).
-- What are the full names of the 2025 programs `AI`, `BMD`, and `CSEC`?
 - Are the chosen track codes (for example `media`, `big_data`) OK?
 - Is the registration-file import script part of my Phase 1 work, or only the seed data?
 - ENGL 002 and ENGL 003 are zero-credit but have contact hours. They are seeded like the other zero-credit courses (false / false / true). Is that right?
@@ -179,7 +179,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - CSCI 112 is seeded with NULL flags because the study-plan sheet does not state them. Ordinary old courses get true / true / true. While the registration-cap flag is NULL, the forecast counts students whose cap trim meets CSCI 112 as unknown (`cap_flag_unknown_student_count`). Which flags should CSCI 112 have? Tracked as data gap `old_sheet_only_csci_112`.
 - CSCI 467 has two table prerequisites: CSCI 322 (general electives, p.22) and MATH 301 and CSCI 322 (Big Data track, p.23); its description says MATH 301 and CSCI 417 (p.41). It gets no row until one is chosen. Seeding CSCI 322 alone would let Big Data students skip MATH 301; seeding MATH 301 and CSCI 322 would add MATH 301 for general-track students; following the description would drop CSCI 322, which both table listings require, and add CSCI 417 for everyone. Which is right? Tracked as data gap `old_prereq_conflict_csci_467`.
 - "Or concurrent" (CSCI 221 in the table, p.20; ECEN 101, CSCI 205, CSCI 304, and CSCI 457 in the descriptions) cannot be stored, so CSCI 221 gets no row. Should the schema support co-requisites? Tracked as data gap `old_or_concurrent`.
-- CSCI 490 requires "Senior Standing" (p.21). The old `senior` band has no credit threshold yet (data gap "old_senior_threshold"), so this row cannot be evaluated until that number is confirmed. Tracked as data gap `old_senior_threshold`.
+- CSCI 490 requires "Senior Standing" (p.21). The threshold has been decided by the team and is applied in a later branch; until then the old `senior` band has no minimum, so this row cannot be evaluated yet. Tracked as data gap `old_senior_threshold`.
 - "Thanaweya Amma or equivalent" (12 old courses), "English 101 Placement" (ENGL 101), and "Completion of 8 core courses" (CSCI 495) are not seeded: seed 001 has no old placement row for the certificate or the placement test, and the schema has no place for a count of completed courses. Should old placement rows be added? Tracked as data gap `old_school_certificate_placement` and `old_core_course_count`.
 - `choose_count` is seeded as the number of courses a student takes from the pool (1 for the old sheets, 2 or 3 for the 2025 plan). database-design.md describes it as "how many courses the slot takes". When the 2025 plan gets slots, should each of the 3 track elective slots point to the same pool with `choose_count` 3, or should the count be 1 per slot?
 - The old general-track elective list (pp.21-22, p.30, 12 credit hours) and the general-education elective "NSCI, SSCI, or HUMA" (p.19) are not seeded as pools. Are they needed, and if so, from which list and with which count? Tracked as data gap `old_general_track_elective_pool` and `old_gen_ed_elective_pool`.

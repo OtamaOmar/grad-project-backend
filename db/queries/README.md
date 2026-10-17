@@ -83,7 +83,5 @@ Source: Omar's answer of 2026-10-16.
 - The pool slot is one box. `template_slots_ordered.sql` returns `elective_pool_id`; `elective_pool_members.sql` returns `choose_count` and the member courses with their credits. Backend B does not edit these SQL files.
 - The box is finished when the student has `choose_count` distinct passed members before the cutoff. No line is written.
 - Otherwise no member gets a resolved `p`. No `forecast_line` row is written for the box, and no rule number is invented (`rule_number` covers rules 1-6 only).
-- Cap: if every member the student has not passed has the same credit value, reserve that value once times the remaining count. If the credits differ, the box is neither added nor dropped.
+- Cap (Omar, 2026-10-17): if every member has the same credits and `counts_toward_registration_cap` true, reserve `choose_count` times those credits. If every member is false, the box does not consume the term maximum. If any member is null, or the members disagree on the flag or the credits, do not reserve and do not drop the box; count that student in the run summary as cap-flag unknown.
 - The student is counted in the `POST /api/forecast-runs` response, the same way as a student with no template. The count is not stored on `offering_forecast`. Elective courses get no predicted headcount from the pool.
-
-Omar's answer does not say how a member with `counts_toward_registration_cap` false or null affects the reserve; `elective_pool_members` returns the flag so Backend B can apply the forecast-io rule for null flags (neither add nor drop) — confirm with Omar.

@@ -215,8 +215,8 @@ Tested: in all 5 tests the same-bylaw insert passed and the cross-bylaw insert r
 
 ## Open questions (for Omar)
 
-- `forecast_line.rule_number`: §19 says "1 to 6", but not as a check, and an unresolved pair has no clear rule. Add `between 1 and 6`?
+- Decided by Omar (2026-10-17): `forecast_line.rule_number` is between 1 and 6 on a resolved line and null on an unresolved line (`is_unresolved` true; never 0 or 7); to be built in a later integrity follow-up branch.
 - `enrollment_student_idx` is covered by the leading column of `enrollment_student_attempt_idx` and of the unique key. Keep it, as §15.4 lists it?
 - `enrollment.attempt_state` allows `not_started`, as §3 lists it, though the file never produces it. Keep it?
-- The triggers check the child row only (§15.3 lists only these 5). Changing `bylaw_id` later on `course`, `student`, `plan_template`, `elective_pool`, `standing_band` or `placement` is not re-checked. Add parent-side triggers, or keep that to seed and load review?
+- Decided by Omar (2026-10-17): `bylaw_id` is immutable after insert on `course`, `student`, `plan_template`, `elective_pool`, `standing_band`, and `placement` (the update is rejected; no triggers that walk the children); to be built in a later integrity follow-up branch.
 - `course_equivalence` uses the fixed codes `old_cs` and `bylaw_2025`. §15.3 says "or the configured old code". Is a fixed code enough?
