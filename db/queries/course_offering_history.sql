@@ -1,4 +1,4 @@
--- Purpose: Retrieve distinct course offering history by term type at or before the cutoff term, counting distinct terms with completed attempts.
+-- Purpose: Retrieve distinct course offering history by term type at or before the cutoff term, counting distinct terms with any loaded enrollment (every attempt state except not_started).
 -- Parameters:
 --   $1 - Cutoff academic term id (bigint)
 -- Returns:
@@ -18,7 +18,7 @@ WHERE (t.academic_year * 10 + CASE t.term_type WHEN 'spring' THEN 1 WHEN 'summer
   FROM academic_term cutoff
   WHERE cutoff.id = $1::bigint
 )
-  AND e.attempt_state IN ('passed', 'failed', 'withdrawn')
+  AND e.attempt_state <> 'not_started'
 GROUP BY e.course_id, t.term_type
 ORDER BY
   e.course_id,
