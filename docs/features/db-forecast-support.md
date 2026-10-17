@@ -103,5 +103,5 @@ Seed check:
 
 ## Open questions (for Omar)
 
-- `forecast_line.rule_number` has no check for 1-6, and an unresolved line has no clear rule number (also open in `db-integrity.md`). Add `CHECK (rule_number BETWEEN 1 AND 6)`, and which rule number does an unresolved line store?
-- The cross-bylaw triggers check the child row only. Changing `bylaw_id` later on `course`, `student`, `plan_template`, `elective_pool`, `standing_band` or `placement` is not re-checked. Add parent-side triggers, or keep that to seed and load review?
+- Decided by Omar (2026-10-17): `forecast_line.rule_number` is between 1 and 6 on a resolved line and null on an unresolved line (`is_unresolved` true; never 0 or 7); to be built in a later integrity follow-up branch.
+- Decided by Omar (2026-10-17): `bylaw_id` is immutable after insert on `course`, `student`, `plan_template`, `elective_pool`, `standing_band`, and `placement` (the update is rejected; no triggers that walk the children); to be built in a later integrity follow-up branch.

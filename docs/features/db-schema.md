@@ -3,7 +3,7 @@
 **Branch:** feature/db-schema
 **Owner:** Kamel (Backend A)
 **Phase:** 1 – Foundations (Excel plan: "Finish the schema")
-**Status:** Done (waiting for PR review)
+**Status:** Done and merged (PR #1)
 
 ## Goal
 
@@ -184,12 +184,12 @@ Migrations run in order of the number at the start of the file name (a timestamp
 - Every PK, FK, and UNIQUE constraint has a readable name, so error messages say which rule failed.
 - **`requisite` targets are not checked yet.** In Phase 1, `required_course_id`, `standing_band_id`, and `placement_id` can all be null. The rule "exactly one target, matching `requisite_type`" is a CHECK constraint added in Phase 2 (database integrity), together with the `lab_kind` check on `course_component`.
 - **`elective_pool_course` is a pure junction table** (database-design.md §3): only `elective_pool_id` and `course_id`, with a composite primary key on the pair. It has no `id` and no timestamps.
-- **Other Phase 2 checks still to add:** `plan_slot` must point to exactly one of `course_id` or `elective_pool_id`, and `course_equivalence.old_course_id` must differ from `new_course_id`. Both are CHECK constraints for Phase 2 (database integrity).
+- **Other Phase 2 checks are done:** `plan_slot` must point to exactly one of `course_id` or `elective_pool_id` (`plan_slot_course_xor_pool`), and `course_equivalence.old_course_id` must differ from `new_course_id` (`course_equivalence_different_courses_check`). feature/database-integrity added both (PR #2).
 - **Result: 22 core tables + `app_user` + `forecast_line` = 24 tables** (25 in `\dt`, counting the tool's own `pgmigrations` table).
 - **`offering_forecast.is_incomplete` is a stored generated column.** PostgreSQL computes it from the four incomplete counts, so it can never disagree with them.
 - **Not built yet, on purpose:** `source_passage` (Phase 1 extension; it needs pgvector and the embedding dimension is not decided yet), and the Phase 2 advising tables (database-design.md §20). Value-list checks (status, attempt_state, method, role, and others), range checks, and the approver and app_user consistency checks are Phase 2 (database integrity).
 - **One offering decision per course and term** (added after PR review). `offering_decision` has UNIQUE (`academic_term_id`, `course_id`), because `PUT /api/offering-decisions` (docs/api-contract.md) saves the current decision and database-design.md §4 says "One course can be decided per term". The §3 column table did not list this constraint, so it was added as a new migration instead of editing a pushed one.
-- **forecast_line is created empty** (Omar's decision). Its CHECKs and the later run index belong to feature/database-integrity; queries and writes belong to feature/database-forecast-support.
+- **forecast_line is created empty** (Omar's decision). Its CHECKs were added by feature/database-integrity, and its queries and writes by feature/database-forecast-support. The later run index (§15.4) is deferred and has no owner yet.
 - **The shared pool logs idle-client errors instead of crashing.** `src/config/db.js` listens for the pool's `error` event (for example after a database restart) and logs the message, so the server keeps running.
 
 ## Progress
