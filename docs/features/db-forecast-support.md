@@ -103,5 +103,5 @@ Seed check:
 
 ## Open questions (for Omar)
 
-- Decided by Omar (2026-10-17): `forecast_line.rule_number` is between 1 and 6 on a resolved line and null on an unresolved line (`is_unresolved` true; never 0 or 7); to be built in a later integrity follow-up branch.
-- Decided by Omar (2026-10-17): `bylaw_id` is immutable after insert on `course`, `student`, `plan_template`, `elective_pool`, `standing_band`, and `placement` (the update is rejected; no triggers that walk the children); to be built in a later integrity follow-up branch.
+- Decided by Omar (2026-10-17): `forecast_line.rule_number` is between 1 and 6 on a resolved line and null on an unresolved line (`is_unresolved` true; never 0 or 7); built in `feature/database-integrity-followup` (migration `1792310395784_integrity-followup.sql`).
+- Decided by Omar (2026-10-17): `bylaw_id` is immutable after insert on `course`, `student`, `plan_template`, `elective_pool`, `standing_band`, and `placement` (the update is rejected; no triggers that walk the children); built in `feature/database-integrity-followup` (migration `1792310395784_integrity-followup.sql`).

@@ -25,6 +25,8 @@ Backend B does not edit these `.sql` files directly.
 
 Node uses `graduation_credits` minus credits passed to match the `graduating` and `credits_remaining_below_minimum` credit_limit populations.
 
+`insert_forecast_line.sql`: `rule_number` is NULL exactly when `is_unresolved` is true (a resolved line has a rule 1-6; `forecast_line_rule_number_check`).
+
 ## Chronology and Term Order
 
 Terms must never be filtered or sorted by `academic_term.id`, because ids do not reflect calendar chronology. Every term ordering and cutoff filter uses composite `term_order`:
