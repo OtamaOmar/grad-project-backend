@@ -524,8 +524,8 @@ Designed row count: **0**.
 |---|---|---|---|---|---|---|---|
 | id | bigint | NO | YES | — | YES | identity | |
 | university_id | varchar(32) | NO | NO | — | YES | — | The real ID. Not invented |
-| cohort_year | integer | NO | NO | — | NO | — | Year taken from that ID. Check `between 1990 and 2100` (sane calendar range; tighten at load if the registrar states a narrower band) |
-| bylaw_id | bigint | NO | NO | bylaw.id | NO | — | Set at load from the cohort rule below |
+| cohort_year | integer | NO | NO | — | NO | — | Year of the student's earliest semester in the extract (Year, then SPRG < SUMMER < FALL; Omar, 2026-10-19), not from the ID. Check `between 1990 and 2100` (sane calendar range; tighten at load if the registrar states a narrower band) |
+| bylaw_id | bigint | NO | NO | bylaw.id | NO | — | Set at load from the Curriculum (Omar, 2026-10-19: every student in the extract is `old_cs`; a `-25` Curriculum stops the load) |
 | program_id | bigint | YES | NO | program.id | NO | — | Unknown until the file or a later fact says so |
 | track_id | bigint | YES | NO | track.id | NO | — | Not on the ID. Stays null until declared or inferred from a track course |
 | english_path | varchar(16) | YES | NO | — | NO | — | Same check as the template. Null until known |
@@ -537,6 +537,8 @@ Cohort rule, applied when the file is loaded, not as a hard-coded check that emb
 
 - cohort year 2024 or earlier, including before 2020 → old bylaw
 - cohort year 2025 or later → 2025 bylaw
+
+For the ActiveStudentsAllProg extract (Omar, 2026-10-18/19) the cohort rule above is not used: `cohort_year` is the Year of the student's earliest semester in the file (Year, then SPRG < SUMMER < FALL), never the ID, and `bylaw_id` comes from the Curriculum (every student is `old_cs`; a `-25` Curriculum stops the load). See `docs/features/db-student-roster.md`.
 
 The student’s baseline template is not stored as a column. Once `track_id`, `english_path`, and `math_path` are known, it is the single `plan_template` matching `(bylaw_id, track_id, english_path, math_path)`, which that table’s unique constraint guarantees. While any of the three is null, the plan is unknown, and the rule engine does not guess one (Nile ask 2).
 
@@ -1162,7 +1164,7 @@ Year 2, fall, the fixed courses read from that sheet:
 
 Sum of those credits: 19. That sum is a query over the slots. It is not a stored “this semester is legal” flag.
 
-Track, English path, and math path are on the template because the workbook has eight official grids. The student ID encodes the cohort year, which selects the bylaw. It does not encode Media versus Big Data, and it does not encode whether the student started in `Math 100`. Those facts are either chosen later or inferred from courses already taken. Putting them on `student` as required columns would pretend the ID contains them.
+Track, English path, and math path are on the template because the workbook has eight official grids. The cohort year comes from the student's earliest semester in the extract and the bylaw from the Curriculum (Omar, 2026-10-19), not from the student ID. The ID does not encode Media versus Big Data, and it does not encode whether the student started in `Math 100`. Those facts are either chosen later or inferred from courses already taken. Putting them on `student` as required columns would pretend the ID contains them.
 
 These templates are not student plans. A student’s own plan, after a failure, is a later feature. It is not this table.
 
