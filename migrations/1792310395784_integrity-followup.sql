@@ -4,6 +4,10 @@
 -- so rule_number is null. 0 and 7 are never stored. is_unresolved is NOT NULL, so the two branches cover every row.
 ALTER TABLE forecast_line ALTER COLUMN rule_number DROP NOT NULL;
 
+-- backfill: unresolved lines from the old schema carried a rule_number; clear it so the check can be added.
+-- Resolved rows with rule_number outside 1-6 are not changed: the check below stops the migration (no invented values).
+UPDATE forecast_line SET rule_number = NULL WHERE is_unresolved AND rule_number IS NOT NULL;
+
 ALTER TABLE forecast_line ADD CONSTRAINT forecast_line_rule_number_check CHECK (
   (is_unresolved AND rule_number IS NULL)
   OR (NOT is_unresolved AND rule_number IS NOT NULL AND rule_number BETWEEN 1 AND 6)
@@ -73,4 +77,5 @@ ALTER TABLE forecast_line DROP CONSTRAINT IF EXISTS forecast_line_rule_number_ch
 
 -- Rollback prerequisite: no forecast_line row may have rule_number NULL (no unresolved line) at rollback time.
 -- Otherwise SET NOT NULL fails with 23502 and, because the Down runs in one transaction, the Up state stays intact.
+-- The Up backfill is not reversed: the old rule_number values of unresolved lines are lost, and Down does not invent values.
 ALTER TABLE forecast_line ALTER COLUMN rule_number SET NOT NULL;

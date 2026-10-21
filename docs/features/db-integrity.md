@@ -138,8 +138,9 @@ The `requisite` function is the §15.3 SQL as written. The other four follow the
 Migration `1792310395784_integrity-followup.sql`, from Omar's two decisions of 2026-10-17.
 
 - `forecast_line.rule_number` becomes nullable, and `forecast_line_rule_number_check` requires: a resolved line (`is_unresolved` false) has `rule_number` between 1 and 6 and not null; an unresolved line has `rule_number` null. 0 and 7 are never stored.
+- Before adding the check, Up sets `rule_number` to NULL on every existing unresolved line. A resolved line with `rule_number` outside 1-6 is left unchanged, so the check stops the migration (no invented values).
 - `trg_bylaw_id_immutable()` rejects a change of `bylaw_id` after insert. It runs from 6 triggers, `<table>_bylaw_id_immutable_trigger` on `course`, `student`, `plan_template`, `elective_pool`, `standing_band`, and `placement`: BEFORE UPDATE OF `bylaw_id`, only WHEN the value really changes, so an update that keeps the same `bylaw_id` (the seed 002 upsert) passes. No trigger walks the child rows.
-- Down drops the 6 triggers, the function and the CHECK, then sets `rule_number` NOT NULL again. That needs no unresolved line (no null `rule_number`) at rollback time; otherwise Down fails with 23502 and, run in one transaction, leaves the Up state in place.
+- Down drops the 6 triggers, the function and the CHECK, then sets `rule_number` NOT NULL again. That needs no unresolved line (no null `rule_number`) at rollback time; otherwise Down fails with 23502 and, run in one transaction, leaves the Up state in place. The Up backfill is not undone, so the old `rule_number` of unresolved lines is not restored.
 - `docs/database-design.md` and `docs/evidence-format.md` still say `rule_number` is NOT NULL and 1 to 6; they are Omar's design docs and are not edited here.
 
 ## Service checks (not in the DB)
