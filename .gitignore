@@ -9,6 +9,9 @@ node_modules/
 # Local delegation files
 .delegate/
 
+# real student data exports never enter the repo
+*.csv
+
 # Node.js
 npm-debug.log*
 yarn-debug.log*
