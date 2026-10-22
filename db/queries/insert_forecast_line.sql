@@ -2,7 +2,7 @@
 -- Parameters:
 --   $1 - offering_forecast_id (bigint)
 --   $2 - student_id (bigint)
---   $3 - rule_number (smallint)
+--   $3 - rule_number (smallint): 1-6 for a resolved line; NULL for an unresolved line
 --   $4 - p (numeric)
 --   $5 - is_unresolved (boolean)
 --   $6 - unresolved_reason (text)

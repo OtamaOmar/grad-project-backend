@@ -3,7 +3,7 @@
 **Branch:** feature/database-integrity
 **Owner:** Kamel (Backend A)
 **Phase:** 2 – Core features (Excel plan: "Constraints, requisite integrity, plan-slot rules, indexes, range checks")
-**Status:** Task 1 done and tested (up, down, up; bad values rejected). Task 2 done and tested (up, down, up; all 5 trigger tests raised their error).
+**Status:** Task 1 done and tested (up, down, up; bad values rejected). Task 2 done and tested (up, down, up; all 5 trigger tests raised their error). Task 3 (integrity follow-up, `feature/database-integrity-followup`) done and tested (up, down, up; 21 test cases incl. 17 expected rejections; Down with data: OK with a resolved line, 23502 with an unresolved line).
 **Depends on:** `main` after PR #1 (24 tables, 6 migrations)
 
 ## Goal
@@ -20,6 +20,7 @@ No new tables, no new columns.
 - Value lists that the doc gives as a closed list (status, term type, role, method, and similar)
 - The 4 indexes in §15.4
 - Cross-bylaw triggers from §15.3 (Task 2)
+- Integrity follow-up (Task 3, Omar 2026-10-17): the `forecast_line.rule_number` check and an immutable parent `bylaw_id`
 
 **Out:**
 
@@ -35,13 +36,15 @@ No new tables, no new columns.
 | --- | --------------------------------------- | ------------ |
 | 1   | CHECK constraints + indexes (this task) | Done, tested |
 | 2   | Cross-bylaw triggers (§15.3)            | Done, tested |
+| 3   | Integrity follow-up (Omar, 2026-10-17)  | Done, tested |
 
 ## Migrations
 
-| File                                     | What it adds                    | Status       |
-| ---------------------------------------- | ------------------------------- | ------------ |
-| `1791495907736_checks-and-indexes.sql`   | 55 CHECK constraints, 4 indexes | Done, tested |
-| `1791499748355_cross-bylaw-triggers.sql` | 5 trigger functions, 5 triggers | Done, tested |
+| File                                     | What it adds                                       | Status       |
+| ---------------------------------------- | -------------------------------------------------- | ------------ |
+| `1791495907736_checks-and-indexes.sql`   | 55 CHECK constraints, 4 indexes                    | Done, tested |
+| `1791499748355_cross-bylaw-triggers.sql` | 5 trigger functions, 5 triggers                    | Done, tested |
+| `1792310395784_integrity-followup.sql`   | 1 CHECK constraint, 1 trigger function, 6 triggers | Done, tested |
 
 ## CHECK constraints (Task 1)
 
@@ -130,6 +133,16 @@ The `requisite` function is the §15.3 SQL as written. The other four follow the
 | `elective_pool_course` | `elective_pool_course_same_bylaw_trigger` | `trg_elective_pool_course_same_bylaw()` | The member course has the pool's bylaw                                                                          | §15.3       |
 | `course_equivalence`   | `course_equivalence_bylaws_trigger`       | `trg_course_equivalence_bylaws()`       | `old_course_id` is in bylaw `old_cs`; `new_course_id` is in bylaw `bylaw_2025` (by `bylaw.code`, not by id)     | §15.3       |
 
+## Integrity follow-up (Task 3)
+
+Migration `1792310395784_integrity-followup.sql`, from Omar's two decisions of 2026-10-17.
+
+- `forecast_line.rule_number` becomes nullable, and `forecast_line_rule_number_check` requires: a resolved line (`is_unresolved` false) has `rule_number` between 1 and 6 and not null; an unresolved line has `rule_number` null. 0 and 7 are never stored.
+- Before adding the check, Up sets `rule_number` to NULL on every existing unresolved line. A resolved line with `rule_number` outside 1-6 is left unchanged, so the check stops the migration (no invented values).
+- `trg_bylaw_id_immutable()` rejects a change of `bylaw_id` after insert. It runs from 6 triggers, `<table>_bylaw_id_immutable_trigger` on `course`, `student`, `plan_template`, `elective_pool`, `standing_band`, and `placement`: BEFORE UPDATE OF `bylaw_id`, only WHEN the value really changes, so an update that keeps the same `bylaw_id` (the seed 002 upsert) passes. No trigger walks the child rows.
+- Down drops the 6 triggers, the function and the CHECK, then sets `rule_number` NOT NULL again. That needs no unresolved line (no null `rule_number`) at rollback time; otherwise Down fails with 23502 and, run in one transaction, leaves the Up state in place. The Up backfill is not undone, so the old `rule_number` of unresolved lines is not restored.
+- `docs/database-design.md` and `docs/evidence-format.md` still say `rule_number` is NOT NULL and 1 to 6; they are Omar's design docs and are not edited here.
+
 ## Service checks (not in the DB)
 
 - The approver of an `offering_decision` must be a coordinator (§3 offering_decision, §15.1). A CHECK cannot read `app_user`.
@@ -160,7 +173,8 @@ npm run migrate:up
 
 - Task 1: `migrate:up` adds the checks and indexes.
 - Task 1: `migrate:down` removed only its checks and indexes; the 24 tables stayed.
-- Task 2: `migrate:down` now undoes only the newest migration: it drops the 5 triggers and 5 functions. The Task 1 checks and indexes stay.
+- Task 2 (historical): `migrate:down` now undoes only the newest migration: it drops the 5 triggers and 5 functions. The Task 1 checks and indexes stay.
+- Task 3: `migrate:down` now undoes only the integrity follow-up: it drops the 6 bylaw_id triggers, the function and `forecast_line_rule_number_check`, then sets `rule_number` NOT NULL again. Prerequisite: no forecast_line row with `rule_number` NULL; otherwise it fails with 23502 and nothing changes.
 - In psql, `\d+ <table>` lists the checks; `\di` lists the indexes.
 - After seeding, `npm run db:seed` must still pass (the seed rows must satisfy every check).
 - Tested on a database with the Part A seed rows: all rows passed every check, and 3 bad updates (data_gap status 'closed', bylaw pass_percentage 150, credit_limit term_type 'winter') were rejected by their CHECK constraints.
@@ -205,6 +219,14 @@ psql -U grad_app -d grad_project -c "BEGIN; INSERT INTO course (bylaw_id, code, 
 If a command prints `ROLLBACK` instead of `ERROR:`, the trigger did not fire.
 Tested: in all 5 tests the same-bylaw insert passed and the cross-bylaw insert raised the expected error; nothing was saved.
 
+### Task 3 test results
+
+- Dev database: `npm run migrate:up`, `npm run migrate:down -- 1`, `npm run migrate:up` all passed.
+- psql test (`BEGIN ... ROLLBACK`, kept outside the repo): all test B cases passed, 17 expected rejections, each with its SQLSTATE and constraint or table name.
+- Down with data (disposable database, dropped afterwards): with a resolved line, `migrate:down -- 1` succeeded; with an unresolved line (`rule_number` NULL), it failed with 23502 and left the Up state intact.
+- `npm run db:seed` ran clean twice.
+- The forecast query test (`test_queries.sql`) still passed all checks (9 read checks, 2 sanity reads, 3 writes).
+
 ## Progress
 
 - [x] Task 1: CHECK constraints (55)
@@ -212,11 +234,13 @@ Tested: in all 5 tests the same-bylaw insert passed and the cross-bylaw insert r
 - [x] Task 1: tested (up, down, up)
 - [x] Task 2: cross-bylaw triggers (5)
 - [x] Task 2: tested
+- [x] Task 3: rule_number check (1) and immutable bylaw_id (1 function, 6 triggers)
+- [x] Task 3: tested
 
 ## Open questions (for Omar)
 
-- Decided by Omar (2026-10-17): `forecast_line.rule_number` is between 1 and 6 on a resolved line and null on an unresolved line (`is_unresolved` true; never 0 or 7); to be built in a later integrity follow-up branch.
+- Done in Task 3 (Omar, 2026-10-17): `forecast_line.rule_number` is between 1 and 6 on a resolved line and null on an unresolved line (`is_unresolved` true; never 0 or 7); built in `feature/database-integrity-followup` (migration `1792310395784_integrity-followup.sql`).
 - `enrollment_student_idx` is covered by the leading column of `enrollment_student_attempt_idx` and of the unique key. Keep it, as §15.4 lists it?
 - `enrollment.attempt_state` allows `not_started`, as §3 lists it, though the file never produces it. Keep it?
-- Decided by Omar (2026-10-17): `bylaw_id` is immutable after insert on `course`, `student`, `plan_template`, `elective_pool`, `standing_band`, and `placement` (the update is rejected; no triggers that walk the children); to be built in a later integrity follow-up branch.
+- Done in Task 3 (Omar, 2026-10-17): `bylaw_id` is immutable after insert on `course`, `student`, `plan_template`, `elective_pool`, `standing_band`, and `placement` (the update is rejected; no triggers that walk the children); built in `feature/database-integrity-followup` (migration `1792310395784_integrity-followup.sql`).
 - `course_equivalence` uses the fixed codes `old_cs` and `bylaw_2025`. §15.3 says "or the configured old code". Is a fixed code enough?
