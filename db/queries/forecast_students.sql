@@ -1,5 +1,8 @@
--- Purpose: Retrieve all students with bylaw pass criteria and matched baseline plan template id.
+-- Purpose: Retrieve the Computer Science students (program code 'CS', any bylaw) with bylaw pass criteria and matched
+--   baseline plan template id.
 -- Parameters: None.
+-- Filter: only students whose program code is 'CS' (any bylaw); students with program_id NULL and AI, BMD and CSEC
+--   students are left out (Omar, 2026-10-18: "Computer Science only").
 -- Returns:
 --   student_id (bigint)
 --   university_id (varchar)
@@ -32,6 +35,7 @@ SELECT
   pt.id AS plan_template_id
 FROM student s
 JOIN bylaw b ON b.id = s.bylaw_id
+JOIN program p ON p.id = s.program_id AND p.code = 'CS'
 LEFT JOIN plan_template pt ON pt.bylaw_id = s.bylaw_id
   AND pt.track_id = s.track_id
   AND pt.english_path = s.english_path
