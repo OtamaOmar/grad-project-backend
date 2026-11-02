@@ -20,18 +20,18 @@ export function query(text, params) {
 }
 
 
-pool.query(`
-    SELECT
-        current_database() AS database,
-        current_schema() AS schema,
-        current_user AS username,
-        to_regclass('public.course') AS course_table
-`)
-.then(result => {
-    console.log('DATABASE INFO:', result.rows[0]);
-})
-.catch(error => {
-    console.error('DATABASE CHECK ERROR:', error);
-});
+// pool.query(`
+//     SELECT
+//         current_database() AS database,
+//         current_schema() AS schema,
+//         current_user AS username,
+//         to_regclass('public.course') AS course_table
+// `)
+// .then(result => {
+//     console.log('DATABASE INFO:', result.rows[0]);
+// })
+// .catch(error => {
+//     console.error('DATABASE CHECK ERROR:', error);
+// });
 
 export default pool;
