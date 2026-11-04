@@ -50,6 +50,10 @@ The 30-attempt threshold required to use the `rates` method stays in application
 
 Offering history (`course_offering_history.sql`) is different: it counts any loaded enrollment (`passed`, `failed`, `withdrawn`, `active`, `unresolved`), because each one shows the course ran in that term. `not_started` is never loaded, so it is excluded as a guard.
 
+## Credit-minimum prerequisites
+
+Credit-minimum follow-up: `course_requisites_grouped.sql` also returns `requisite_type = 'credits'`. Its existing `min_credits_passed` field is the inclusive minimum (CSC 493: 87), with no standing band or upper bound. Backend B must explicitly evaluate this type using completed credits at the information cutoff; unknown totals/types must not pass automatically. See [CSC 493 credit requisite](../../docs/features/db-credit-requisite.md).
+
 ## Transaction Boundary (One Run = One Transaction)
 
 A forecast run must execute inside a single transaction using one checked-out client from the pool. Do not use individual `pool.query()` calls per statement:

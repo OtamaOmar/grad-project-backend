@@ -14,6 +14,9 @@
     "migrate:down": "node-pg-migrate down",
     "migrate:create": "node-pg-migrate create --migration-file-language sql",
     "db:check": "node scripts/db-check.js",
+    "db:audit": "node scripts/db-audit.js",
+    "test:db-audit": "node --test scripts/test-reference-data-audit.js",
+    "test:db-credits": "node --test scripts/test-credit-requisite.js",
     "db:seed": "node scripts/db-seed.js"
   },
   "repository": {

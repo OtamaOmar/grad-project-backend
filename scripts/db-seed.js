@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runReferenceAudit } from "./reference-data-audit.js";
 
 let pool;
 
@@ -13,7 +14,7 @@ try {
   const files = entries.filter((file) => file.endsWith(".sql")).sort();
 
   if (files.length === 0) {
-    console.log("No seed files found in seeds/");
+    throw new Error("No seed files found in seeds/");
   } else {
     let failed = false;
 
@@ -43,6 +44,7 @@ try {
     }
 
     if (!failed) {
+      await runReferenceAudit(pool);
       console.log("Seeding complete.");
     }
   }

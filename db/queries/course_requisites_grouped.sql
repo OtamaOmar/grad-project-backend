@@ -10,6 +10,7 @@
 --   standing_band_id (bigint)
 --   standing_level (varchar)
 --   min_credits_passed (integer)
+--     For credits: inclusive minimum from requisite; for standing: band lower bound.
 --   max_credits_passed (integer)
 --   placement_id (bigint)
 --   placement_code (varchar)
@@ -23,7 +24,8 @@ SELECT
   r.required_course_id,
   r.standing_band_id,
   sb.level AS standing_level,
-  sb.min_credits_passed,
+  CASE WHEN r.requisite_type = 'credits' THEN r.min_credits_passed
+    ELSE sb.min_credits_passed END AS min_credits_passed,
   sb.max_credits_passed,
   r.placement_id,
   pl.code AS placement_code
