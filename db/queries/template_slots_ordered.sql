@@ -13,7 +13,7 @@
 --   credits (integer)
 --   counts_toward_registration_cap (boolean)
 --   elective_pool_id (bigint)
--- Ordering: ps.plan_template_id ASC, ps.study_year ASC, ps.term_type (fall then spring), ps.position ASC.
+-- Ordering: ps.plan_template_id ASC, ps.study_year ASC, ps.term_type (fall, spring, summer), ps.position ASC.
 
 SELECT
   ps.id AS plan_slot_id,
@@ -34,5 +34,5 @@ WHERE pt.bylaw_id = $1::bigint
 ORDER BY
   ps.plan_template_id,
   ps.study_year,
-  CASE ps.term_type WHEN 'fall' THEN 1 WHEN 'spring' THEN 2 END,
+  CASE ps.term_type WHEN 'fall' THEN 1 WHEN 'spring' THEN 2 WHEN 'summer' THEN 3 END,
   ps.position;
