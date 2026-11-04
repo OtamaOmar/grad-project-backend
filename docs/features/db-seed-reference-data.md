@@ -76,6 +76,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
 | `013_data-gaps-plan-slots.sql`           | `data_gap` (plan slots)                                                                   | 2                  | Done, tested twice (2 rows, no duplicates)    |
 | `014_data-gaps-audit.sql`                | `data_gap` (audit)                                                                        | 2                  | Added by the audit cleanup                    |
 | `015_plan-slots-2025.sql`                | 2025 CS `plan_template`, `plan_slot`                                                        | 4, 180             | Tested on isolated PostgreSQL, including re-runs |
+| `016_course-components-old.sql` | `course_component` (old) | 97 | Exact source hours: 54 lecture, 13 tutorial, 30 lab |
 
 ## Decisions
 
@@ -178,7 +179,7 @@ Run these after `npm run migrate:up` (the tables must exist first):
 - ENGL 100 Intensive English (0 credits, p.19) is seeded with the zero-credit flags (false / false / true). database-design.md §3 names the old zero-credit courses ENGL 001 and Math 100, which are workbook codes. Is ENGL 100 the same kind of course?
 - The study plan (pp.27-28) uses CSCI 105 Introduction to Programming and splits Logic Design into CSCI 221 (3) and CSCI 221L Logic Design Lab (1); the course table has CSCI 201 Introduction to Programming and CSCI 221 Logic Design (4). The seed follows the table. Is CSCI 105 the same course as CSCI 201? Tracked as data gap `old_csci_105_vs_csci_201` and `old_csci_221l_lab`.
 - The Big Data study plan (p.29) names MATH 302 as a prerequisite of CSCI 467, but MATH 302 is not in the course tables. It is not seeded. What is MATH 302? Tracked as data gap `old_math_302_unknown`.
-- The old course tables also give weekly hours (Lecture and Section/Lab, pp.19-23), some of them fractional (for example 12.5, 2.5, 1.5) or with both a section and a lab. `course_component.weekly_contact_hours` is an integer, so a later components task must decide how to store them. Tracked as data gap `old_weekly_hours`.
+- The old course-table contact hours are now stored exactly as numeric values by migration `1793750400002_fractional-component-hours.sql` and seed 016: 97 rows on 54 courses. MATH 111 has an unlabelled 2 under Section/Lab, so only its lecture is loaded; `old_weekly_hours` remains open for that classification. See [old component hours](db-component-hours.md).
 - CSCI 112 is seeded with NULL flags because the study-plan sheet does not state them. Ordinary old courses get true / true / true. While the registration-cap flag is NULL, the forecast counts students whose cap trim meets CSCI 112 as unknown (`cap_flag_unknown_student_count`). Which flags should CSCI 112 have? Tracked as data gap `old_sheet_only_csci_112`.
 - CSCI 467 has two table prerequisites: CSCI 322 (general electives, p.22) and MATH 301 and CSCI 322 (Big Data track, p.23); its description says MATH 301 and CSCI 417 (p.41). It gets no row until one is chosen. Seeding CSCI 322 alone would let Big Data students skip MATH 301; seeding MATH 301 and CSCI 322 would add MATH 301 for general-track students; following the description would drop CSCI 322, which both table listings require, and add CSCI 417 for everyone. Which is right? Tracked as data gap `old_prereq_conflict_csci_467`.
 - "Or concurrent" (CSCI 221 in the table, p.20; ECEN 101, CSCI 205, CSCI 304, and CSCI 457 in the descriptions) cannot be stored, so CSCI 221 gets no row. Should the schema support co-requisites? Tracked as data gap `old_or_concurrent`.
@@ -214,3 +215,7 @@ ORDER BY pt.source_sheet;
 Expect four rows, all year 3 / spring. The original 362 old-plan slots remain; the combined seed total is 542 slots across 12 templates on a reference-only database.
 
 Validated on isolated PostgreSQL: upgrade from the previous schema and elective counts, repeated `db:seed` with no duplicate slots, preservation of old mappings and data-gap status, SSCI 301 placement, both summer-training courses, elective membership lookup, chronological slot ordering, atomic rejection of Down with summer data, Down/Up/Up without summer slots, and failure on a missing parent course. The existing forecast query suite also passes (9 read checks, 2 sanity reads, 3 writes).
+
+## Old component-hours follow-up
+
+Seed 016 adds 97 source-backed old components (54 lecture, 13 tutorial, 30 lab), preserving fractions rather than rounding them. The combined component total is 238 (97 old + 141 new). Source PDFs and workbooks are unchanged. MATH 111's unlabelled Section/Lab hours remain unresolved; no hours are copied to sheet-only codes or inferred for blank training/project cells. See [details and rollback limits](db-component-hours.md).

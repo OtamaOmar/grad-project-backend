@@ -105,24 +105,51 @@ export async function auditReferenceData(client) {
     SELECT b.code AS bylaw, c.code AS course, cc.component_type AS type,
       cc.weekly_contact_hours AS hours, cc.lab_kind AS "labKind"
     FROM course_component cc JOIN course c ON c.id = cc.course_id
-    JOIN bylaw b ON b.id = c.bylaw_id WHERE b.code = 'bylaw_2025'
+    JOIN bylaw b ON b.id = c.bylaw_id WHERE b.code IN ('old_cs', 'bylaw_2025')
   `);
-  const componentKey = (row) => JSON.stringify(row);
-  const expectedComponents = new Set(
-    policy.bylaws.bylaw_2025.components.map(componentKey),
-  );
-  const actualComponents = new Set(
-    components.map((row) =>
-      componentKey([row.course, row.type, row.hours, row.labKind]),
-    ),
-  );
-  for (const row of expectedComponents) {
-    if (!actualComponents.has(row))
-      errors.push(`bylaw_2025: missing or changed component ${row}`);
+  // pg returns numeric as strings. Canonicalise decimal spelling, not precision:
+  // 2, "2.0" and "2.00" match, but "2.000000000000000000001" must not match 2.
+  const componentKey = ([course, type, hours, labKind]) =>
+    JSON.stringify([
+      course,
+      type,
+      String(hours)
+        .replace(/(\.\d*?)0+$/, "$1")
+        .replace(/\.$/, ""),
+      labKind,
+    ]);
+  for (const [bylaw, expected] of Object.entries(policy.bylaws)) {
+    const expectedComponents = new Set(expected.components.map(componentKey));
+    const actualComponents = new Set(
+      components
+        .filter((row) => row.bylaw === bylaw)
+        .map((row) =>
+          componentKey([row.course, row.type, row.hours, row.labKind]),
+        ),
+    );
+    for (const row of expectedComponents) {
+      if (!actualComponents.has(row))
+        errors.push(`${bylaw}: missing or changed component ${row}`);
+    }
+    for (const row of actualComponents) {
+      if (!expectedComponents.has(row))
+        errors.push(`${bylaw}: unexpected component ${row}`);
+    }
   }
-  for (const row of actualComponents) {
-    if (!expectedComponents.has(row))
-      errors.push(`bylaw_2025: unexpected component ${row}`);
+  if (
+    components.some(
+      (row) => row.bylaw === "old_cs" && row.course === "MATH 111",
+    ) &&
+    !components.some(
+      (row) =>
+        row.bylaw === "old_cs" &&
+        row.course === "MATH 111" &&
+        row.type !== "lecture",
+    )
+  ) {
+    warnings.push(
+      "old_cs: MATH 111 has 2 unclassified Section/Lab hours in the source; only its lecture is loaded (old_weekly_hours)",
+    );
   }
   const { rows: requisites } = await client.query(`
     SELECT b.code AS bylaw, c.code AS course, r.group_number AS "groupNumber",
