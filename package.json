@@ -18,7 +18,8 @@
     "test:db-audit": "node --test scripts/test-reference-data-audit.js",
     "test:db-credits": "node --test scripts/test-credit-requisite.js",
     "test:db-hours": "node --test scripts/test-component-hours.js",
-    "db:seed": "node scripts/db-seed.js"
+    "db:seed": "node scripts/db-seed.js",
+    "db:import": "node scripts/db-import.js"
   },
   "repository": {
     "type": "git",
