@@ -42,6 +42,8 @@ The response includes `forecast_run_id` and a count of students who contributed 
 
 Backend B calls Backend A’s parameterised SQL. It does not edit those files.
 
+The prerequisite query now supports `requisite_type = 'credits'`: `min_credits_passed` is an inclusive numeric minimum, with no standing band or upper bound. CSC 493 requires 87 completed credits (2025 Art. 36, p.28). Backend B must handle this type at the information cutoff; unknown totals or unsupported types remain unresolved. The grouping rule stays AND within a group / OR across groups. See [the database change and Backend B handoff](features/db-credit-requisite.md).
+
 | Query | Used for |
 |---|---|
 | `forecast_students` | Who is in the run |
@@ -130,5 +132,5 @@ The table stores three yes/no flags. It does not store section counts, and the c
 | Demo students | Synthetic ids `SYN-0001…` in `db/fixtures/test/`. Loaded only into a database whose name ends in `_test` or `_dev`. Never by `db:seed` |
 | Banner | When the API is serving that synthetic set, the dashboard shows `SyntheticDataBanner`. Forecast numbers are arithmetic on fixtures, not institutional results |
 | MAE | Not computed and not displayed. The Table 11 evaluation row is blocked on Nile ask 1. `is_evaluation_replay` stays false |
-| 2025 sheet demand | Blocked. There are no 2025 `plan_template` or `plan_slot` rows (Nile ask 3). A 2025 student has no baseline sheet demand until that plan arrives. 2025 courses still use `simple_count` if a run reaches them. Their headcount is never added to an old-bylaw headcount |
+| 2025 sheet demand | Seed 015 now provides four track templates and 180 slots for the printed english_1/calculus_1 path, including summer training. Two compulsory positions per track and unprinted entry paths remain unresolved; never guess those mappings (see features/db-seed-reference-data.md). 2025 courses still use `simple_count` if a run reaches them. Their headcount is never added to an old-bylaw headcount |
 | Other nulls that stay null | Old senior minimum (do not seed 106), old “first year” (never matched), `max_attempts`, `min_students_to_open`, training and internship `counts_toward_registration_cap`, `course_equivalence` (empty) |

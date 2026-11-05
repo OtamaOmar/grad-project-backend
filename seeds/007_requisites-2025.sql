@@ -137,21 +137,47 @@ WHERE NOT EXISTS (
     AND r.placement_id IS NOT DISTINCT FROM x.placement_id
 );
 
--- check: 76 requisites for the 2025 bylaw (70 course, 3 standing, 3 placement), no duplicates
+-- CSC 493: a numeric minimum, not the senior standing band (which starts at 96).
+-- Match by target/group/type so a re-run corrects the value rather than appending
+-- a second rule. Multiple existing matches are rejected by the checks below.
+WITH target AS (
+  SELECT c.id FROM course c JOIN bylaw b ON b.id = c.bylaw_id
+  WHERE b.code = 'bylaw_2025' AND c.code = 'CSC 493'
+)
+UPDATE requisite r SET
+  min_credits_passed = 87,
+  source_reference = '2025 bylaw Art. 36, p.28, prerequisite: Completing 87 Credit Hours or more',
+  updated_at = now()
+FROM target
+WHERE r.course_id = target.id AND r.group_number = 1 AND r.requisite_type = 'credits';
+
+INSERT INTO requisite (course_id, group_number, requisite_type, min_credits_passed, source_reference)
+SELECT c.id, 1, 'credits', 87,
+  '2025 bylaw Art. 36, p.28, prerequisite: Completing 87 Credit Hours or more'
+FROM course c JOIN bylaw b ON b.id = c.bylaw_id
+WHERE b.code = 'bylaw_2025' AND c.code = 'CSC 493'
+  AND NOT EXISTS (
+    SELECT 1 FROM requisite r WHERE r.course_id = c.id
+      AND r.group_number = 1 AND r.requisite_type = 'credits'
+  );
+
+-- check: 77 requisites (70 course, 3 standing, 3 placement, 1 credits), no duplicates
 DO $$
 DECLARE
   total_count integer;
   course_count integer;
   standing_count integer;
   placement_count integer;
+  credits_count integer;
   duplicate_count integer;
 BEGIN
   SELECT
     count(*),
     count(*) FILTER (WHERE r.requisite_type = 'course'),
     count(*) FILTER (WHERE r.requisite_type = 'standing'),
-    count(*) FILTER (WHERE r.requisite_type = 'placement')
-  INTO total_count, course_count, standing_count, placement_count
+    count(*) FILTER (WHERE r.requisite_type = 'placement'),
+    count(*) FILTER (WHERE r.requisite_type = 'credits')
+  INTO total_count, course_count, standing_count, placement_count, credits_count
   FROM requisite r
   JOIN course c ON c.id = r.course_id
   JOIN bylaw b ON b.id = c.bylaw_id
@@ -164,13 +190,20 @@ BEGIN
     JOIN course c ON c.id = r.course_id
     JOIN bylaw b ON b.id = c.bylaw_id
     WHERE b.code = 'bylaw_2025'
-    GROUP BY r.course_id, r.group_number, r.requisite_type, r.required_course_id, r.standing_band_id, r.placement_id
+    GROUP BY r.course_id, r.group_number, r.requisite_type, r.required_course_id, r.standing_band_id, r.placement_id, r.min_credits_passed
     HAVING count(*) > 1
   ) d;
 
-  IF total_count <> 76 OR course_count <> 70 OR standing_count <> 3 OR placement_count <> 3 THEN
-    RAISE EXCEPTION 'Expected 76 bylaw_2025 requisites (70 course, 3 standing, 3 placement), found % (% course, % standing, % placement)',
-      total_count, course_count, standing_count, placement_count;
+  IF total_count <> 77 OR course_count <> 70 OR standing_count <> 3 OR placement_count <> 3 OR credits_count <> 1 THEN
+    RAISE EXCEPTION 'Expected 77 bylaw_2025 requisites (70 course, 3 standing, 3 placement, 1 credits), found % (% course, % standing, % placement, % credits)',
+      total_count, course_count, standing_count, placement_count, credits_count;
+  END IF;
+
+  IF (SELECT count(*) FROM requisite r JOIN course c ON c.id = r.course_id
+      JOIN bylaw b ON b.id = c.bylaw_id WHERE b.code = 'bylaw_2025'
+      AND c.code = 'CSC 493' AND r.group_number = 1
+      AND r.requisite_type = 'credits' AND r.min_credits_passed = 87) <> 1 THEN
+    RAISE EXCEPTION 'Expected CSC 493 group 1 credit minimum 87 exactly once';
   END IF;
 
   IF duplicate_count > 0 THEN

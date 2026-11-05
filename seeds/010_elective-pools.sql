@@ -2,17 +2,18 @@
 -- 2025 bylaw: Computer Science program pools of Article 36 and its suggested study plan)
 -- elective_pool has no UNIQUE key, so a pool is matched on bylaw, track, and name:
 -- existing matches get their choose_count and source_reference updated, missing pools are inserted.
+-- Each plan slot selects one member, so choose_count is 1 (including repeated 2025 boxes).
 -- Tracks belong to the CS program of the pool's bylaw.
 WITH v (bylaw_code, track_code, name, choose_count, source_reference) AS (
   VALUES
   ('old_cs', 'media', 'Media track technical elective', 1, 'CS-StudyPlan_Sep 24.xlsx, Media sheets: Technical Elective slot H41, List of CS electives B49:B52; Old CS bylaw course tables, p.22'),
   ('old_cs', 'big_data', 'Big Data track technical elective', 1, 'CS-StudyPlan_Sep 24.xlsx, Big Data sheets: Technical Elective slot H41, List of CS electives B49:B51; Old CS bylaw course tables, p.23'),
-  ('bylaw_2025', NULL, 'CS Humanities elective', 2, '2025 bylaw Art. 36, p.24; suggested CS study plan, pp.33-34'),
-  ('bylaw_2025', NULL, 'CS Social Sciences elective', 2, '2025 bylaw Art. 36, p.24; suggested CS study plan, p.34'),
-  ('bylaw_2025', 'data_engineering_analytics', 'Data Engineering and Analytics track elective', 3, '2025 bylaw Art. 36, p.26; suggested CS study plan, p.34'),
-  ('bylaw_2025', 'media_informatics', 'Media Informatics track elective', 3, '2025 bylaw Art. 36, pp.26-27; suggested CS study plan, p.34'),
-  ('bylaw_2025', 'software_engineering', 'Software Engineering track elective', 3, '2025 bylaw Art. 36, p.27; suggested CS study plan, p.34'),
-  ('bylaw_2025', 'quantum_computing', 'Quantum Computing track elective', 3, '2025 bylaw Art. 36, p.27; suggested CS study plan, p.34')
+  ('bylaw_2025', NULL, 'CS Humanities elective', 1, '2025 bylaw Art. 36, p.24; suggested CS study plan, pp.33-34'),
+  ('bylaw_2025', NULL, 'CS Social Sciences elective', 1, '2025 bylaw Art. 36, p.24; suggested CS study plan, p.34'),
+  ('bylaw_2025', 'data_engineering_analytics', 'Data Engineering and Analytics track elective', 1, '2025 bylaw Art. 36, p.26; suggested CS study plan, p.34'),
+  ('bylaw_2025', 'media_informatics', 'Media Informatics track elective', 1, '2025 bylaw Art. 36, pp.26-27; suggested CS study plan, p.34'),
+  ('bylaw_2025', 'software_engineering', 'Software Engineering track elective', 1, '2025 bylaw Art. 36, p.27; suggested CS study plan, p.34'),
+  ('bylaw_2025', 'quantum_computing', 'Quantum Computing track elective', 1, '2025 bylaw Art. 36, p.27; suggested CS study plan, p.34')
 ),
 x AS (
   SELECT
