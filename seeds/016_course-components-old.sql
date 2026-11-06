@@ -51,7 +51,7 @@ FROM (VALUES
   ('CSCI 217', 'lab', 2, 'computing', 'CS Old Bylaws.pdf, course tables, p.20, CSCI 217, lab'),
   ('CSCI 221', 'lecture', 2, NULL, 'CS Old Bylaws.pdf, course tables, p.20, CSCI 221, lecture'),
   ('CSCI 221', 'tutorial', 2, NULL, 'CS Old Bylaws.pdf, course tables, p.20, CSCI 221, Section (sec)'),
-  ('CSCI 221', 'lab', 2, 'computing', 'CS Old Bylaws.pdf, course tables, p.20, CSCI 221, lab'),
+  ('CSCI 221', 'lab', 2, 'physics_circuits', 'CS Old Bylaws.pdf, course tables, p.20, CSCI 221, lab'),
   ('CSCI 304', 'lecture', 2, NULL, 'CS Old Bylaws.pdf, course tables, p.20, CSCI 304, lecture'),
   ('CSCI 304', 'tutorial', 2, NULL, 'CS Old Bylaws.pdf, course tables, p.20, CSCI 304, Section (sec)'),
   ('CSCI 311', 'lecture', 2, NULL, 'CS Old Bylaws.pdf, course tables, p.20, CSCI 311, lecture'),

@@ -64,7 +64,7 @@ test("97 old components include both section and lab where printed", async () =>
   for (const [code, kind] of [
     ["PHYS 101", "physics_circuits"],
     ["CSCI 101", "computing"],
-    ["CSCI 221", "computing"],
+    ["CSCI 221", "physics_circuits"],
   ]) {
     const id = (
       await client.query(
