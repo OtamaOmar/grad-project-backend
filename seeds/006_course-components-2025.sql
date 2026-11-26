@@ -61,7 +61,7 @@ FROM (VALUES
   ('bylaw_2025', 'CSC 204', 'lab', 2, 'computing', '2025 bylaw Art. 36, p.25'),
   ('bylaw_2025', 'CSC 211', 'lecture', 2, NULL, '2025 bylaw Art. 36, p.25'),
   ('bylaw_2025', 'CSC 211', 'tutorial', 2, NULL, '2025 bylaw Art. 36, p.25'),
-  ('bylaw_2025', 'CSC 211', 'lab', 1, 'computing', '2025 bylaw Art. 36, p.25'),
+  ('bylaw_2025', 'CSC 211', 'lab', 1, 'physics_circuits', '2025 bylaw Art. 36, p.25'),
   ('bylaw_2025', 'CSC 212', 'lecture', 2, NULL, '2025 bylaw Art. 36, p.25'),
   ('bylaw_2025', 'CSC 212', 'lab', 2, 'computing', '2025 bylaw Art. 36, p.25'),
   ('bylaw_2025', 'CSC 221', 'lecture', 2, NULL, '2025 bylaw Art. 36, p.25'),
