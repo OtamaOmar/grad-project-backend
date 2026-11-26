@@ -85,8 +85,8 @@ function gpa(attempts) {
 }
 
 // Keeps one attempt per course: the one with the highest grade points.
-// Team decision: when a course is repeated, the highest grade counts in the CGPA.
-// (Still open with the doctor: the old bylaw Art. 22 says the latest grade counts.)
+// When a course is repeated, the highest grade counts in the CGPA.
+// Confirmed by the doctor on 2026-11-27 (it replaces the old bylaw Art. 22 "latest grade" rule).
 function bestAttemptPerCourse(attempts) {
   const best = new Map();
   for (const row of attempts) {
