@@ -1,12 +1,45 @@
 import { z } from "zod";
 import { clearSession, issueSession } from "../services/session.service.js";
-import { toMe, verifyCredentials } from "../services/user.service.js";
+import { findStudentForSignup } from "../services/student.service.js";
+import {
+  createStudentUser,
+  saveOnboarding,
+  toMe,
+  verifyCredentials,
+} from "../services/user.service.js";
 import { AppError } from "../utils/AppError.js";
 
 // What a login request may contain: a username (case and spaces ignored) and a password.
 export const loginSchema = z.strictObject({
   username: z.string().trim().toLowerCase().min(1).max(64),
   password: z.string().min(1).max(128),
+});
+
+const universityId = z.string().trim().min(1).max(32);
+
+// Signup step 1: just the university ID.
+export const lookupSchema = z.strictObject({ university_id: universityId });
+
+// Signup step 2: the university ID again, plus the username and password the student picks.
+export const signupSchema = z.strictObject({
+  university_id: universityId,
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(
+      /^[a-z0-9._-]{3,64}$/,
+      "3 to 64 characters: letters, digits, dot, dash or underscore",
+    ),
+  password: z.string().min(8).max(128),
+});
+
+// Onboarding/profile fields. All optional, so the profile page can save just some of them.
+export const onboardingSchema = z.strictObject({
+  full_name: z.string().trim().min(1).max(200).optional(),
+  birthdate: z.iso.date().optional(),
+  preferred_language: z.enum(["en", "ar"]).optional(),
+  preferred_theme: z.enum(["light", "dark"]).optional(),
 });
 
 // POST /api/auth/login: the same login for every role.
@@ -38,4 +71,66 @@ export function logout(req, res) {
 // GET /api/me: who is signed in. The frontend uses it to guard pages by role.
 export function me(req, res) {
   res.json({ user: toMe(req.user) });
+}
+
+// Finds the student for a signup, or stops with 404 (ID not in the records)
+// or 409 (this student already has an account).
+async function studentAllowedToSignUp(universityIdValue) {
+  const student = await findStudentForSignup(universityIdValue);
+  if (!student) {
+    throw new AppError(
+      404,
+      "STUDENT_NOT_FOUND",
+      "This university ID is not in the student record.",
+    );
+  }
+  if (student.has_account) throw alreadyLinked();
+  return student;
+}
+
+// 409: this student already has an account.
+const alreadyLinked = () =>
+  new AppError(
+    409,
+    "ALREADY_LINKED",
+    "An account already exists for this university ID.",
+  );
+
+// POST /api/auth/signup/lookup: checks that the university ID is a known student
+// without an account yet, before the student picks a username and password.
+export async function signupLookup(req, res) {
+  const student = await studentAllowedToSignUp(req.body.university_id);
+  res.json({
+    university_id: student.university_id,
+    cohort_year: student.cohort_year,
+  });
+}
+
+// POST /api/auth/signup: creates the student's account and signs them in.
+// Errors: 404 unknown ID, 409 ID already has an account, 409 username taken.
+export async function signup(req, res) {
+  const { university_id, username, password } = req.body;
+  const student = await studentAllowedToSignUp(university_id);
+
+  let user;
+  try {
+    user = await createStudentUser(student.id, username, password);
+  } catch (err) {
+    // Unique keys catch the race where someone else signed up a moment earlier.
+    if (err.constraint === "app_user_student_id_key") throw alreadyLinked();
+    if (err.constraint === "app_user_username_key") {
+      throw new AppError(409, "USERNAME_TAKEN", "This username is taken.");
+    }
+    throw err;
+  }
+
+  issueSession(res, user.id);
+  res.status(201).json({ user: toMe(user) });
+}
+
+// PATCH /api/me/onboarding: saves name, birthdate, language and theme for the
+// signed-in user (any role). The user is always the session, never the body.
+export async function onboarding(req, res) {
+  const user = await saveOnboarding(req.user.id, req.body);
+  res.json({ user: toMe(user) });
 }
