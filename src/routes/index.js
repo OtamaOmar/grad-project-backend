@@ -11,13 +11,19 @@ import {
   signupLookup,
   signupSchema,
 } from "../controllers/auth.controller.js";
+import {
+  decisionSchema,
+  getDecisions,
+  listQuerySchema,
+  putDecision,
+} from "../controllers/offeringDecision.controller.js";
 import { academicData } from "../controllers/student.controller.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { authRateLimit } from "../middleware/rateLimit.js";
 import { validate } from "../middleware/validate.js";
 
 // All /api routes in one place. Public routes first, then the ones that need a session.
-// Coordinator and forecast routes are added here as their branches are merged.
+// Forecast routes are added here when that branch is merged.
 export const apiRouter = Router();
 
 // Public
@@ -56,4 +62,20 @@ apiRouter.get(
   authenticate,
   requireRole("student"),
   academicData,
+);
+
+// Coordinator only
+apiRouter.put(
+  "/offering-decisions",
+  authenticate,
+  requireRole("coordinator"),
+  validate({ body: decisionSchema }),
+  putDecision,
+);
+apiRouter.get(
+  "/offering-decisions",
+  authenticate,
+  requireRole("coordinator"),
+  validate({ query: listQuerySchema }),
+  getDecisions,
 );
