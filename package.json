@@ -20,6 +20,7 @@
     "test:db-hours": "node --test scripts/test-component-hours.js",
     "db:seed": "node scripts/db-seed.js",
     "db:import": "node scripts/db-import.js",
+    "test:app": "node --test scripts/test-app-layer.js",
     "user:create": "node src/cli/create-staff-user.js"
   },
   "repository": {
