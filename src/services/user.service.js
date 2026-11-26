@@ -45,6 +45,43 @@ export function hashPassword(password) {
   return argon2.hash(password, { type: argon2.argon2id });
 }
 
+// Creates the student's own account, linked to their student row. Returns the new user.
+// The database refuses a second account for the same student or a taken username
+// (unique keys), so two signups at the same moment cannot both win.
+export async function createStudentUser(studentId, username, password) {
+  const { rows } = await query(
+    `INSERT INTO app_user (role, student_id, username, password_hash)
+     VALUES ('student', $1, $2, $3)
+     RETURNING ${PUBLIC_COLUMNS}`,
+    [studentId, username, await hashPassword(password)],
+  );
+  return rows[0];
+}
+
+// Saves the onboarding/profile fields that were sent and leaves the rest as they are.
+// The first save also stamps onboarded_at. Returns the updated user.
+export async function saveOnboarding(userId, fields) {
+  const { rows } = await query(
+    `UPDATE app_user
+        SET full_name          = COALESCE($2, full_name),
+            birthdate          = COALESCE($3::date, birthdate),
+            preferred_language = COALESCE($4, preferred_language),
+            preferred_theme    = COALESCE($5, preferred_theme),
+            onboarded_at       = COALESCE(onboarded_at, now()),
+            updated_at         = now()
+      WHERE id = $1
+      RETURNING ${PUBLIC_COLUMNS}`,
+    [
+      userId,
+      fields.full_name ?? null,
+      fields.birthdate ?? null,
+      fields.preferred_language ?? null,
+      fields.preferred_theme ?? null,
+    ],
+  );
+  return rows[0];
+}
+
 // The user as the frontend sees it (login and GET /api/me). No password data.
 // Ids come out of Postgres as text, so they are turned back into numbers here.
 export function toMe(user) {
