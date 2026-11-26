@@ -70,13 +70,13 @@ before(async () => {
 
   [course, otherCourse] = (
     await pool.query(
-      `SELECT c.id FROM course c
+      `SELECT c.id, c.code FROM course c
         WHERE EXISTS (SELECT 1 FROM course_component cc WHERE cc.course_id = c.id AND cc.component_type = 'lecture')
           AND EXISTS (SELECT 1 FROM course_component cc WHERE cc.course_id = c.id AND cc.component_type = 'tutorial')
           AND NOT EXISTS (SELECT 1 FROM course_component cc WHERE cc.course_id = c.id AND cc.component_type = 'lab')
         ORDER BY c.code LIMIT 2`,
     )
-  ).rows.map((row) => ({ id: Number(row.id) }));
+  ).rows.map((row) => ({ id: Number(row.id), code: row.code }));
   term = (
     await pool.query("SELECT id FROM academic_term ORDER BY id DESC LIMIT 1")
   ).rows[0];
@@ -248,4 +248,67 @@ test("GET lists the term's decisions and needs termId", async () => {
     cookie: coordinatorCookie,
   });
   assert.equal(missing.status, 400);
+});
+
+test("a forecast row id alone supplies the course and term", async () => {
+  const res = await decide({
+    offering_forecast_id: forecastId,
+    lecture_open: true,
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.json.course_id, course.id);
+  assert.equal(res.json.academic_term_id, term.id);
+  assert.equal(res.json.offering_forecast_id, forecastId);
+
+  const nothing = await decide({ lecture_open: true });
+  assert.equal(nothing.status, 400);
+  const onlyCourse = await decide({ course_id: course.id, lecture_open: true });
+  assert.equal(onlyCourse.status, 400);
+});
+
+test("GET searches, filters, sorts and pages like the mock", async () => {
+  await decide({ offering_forecast_id: forecastId, lecture_open: true });
+  await decide({
+    offering_forecast_id: otherForecastId,
+    lecture_open: true,
+    tutorial_open: true,
+  });
+  const list = (query) =>
+    call("GET", `/api/offering-decisions?termId=${term.id}&${query}`, {
+      cookie: coordinatorCookie,
+    });
+  const ours = (items) =>
+    items
+      .map((item) => item.course_id)
+      .filter((id) => id === course.id || id === otherCourse.id);
+
+  const search = await list(
+    `q=${encodeURIComponent(course.code.toLowerCase())}`,
+  );
+  assert.ok(search.json.items.some((item) => item.course_id === course.id));
+  assert.ok(
+    search.json.items.every(
+      (item) =>
+        item.course_code.toLowerCase().includes(course.code.toLowerCase()) ||
+        item.course_title.toLowerCase().includes(course.code.toLowerCase()),
+    ),
+  );
+
+  const byCourse = await list(`course_id=${otherCourse.id}`);
+  assert.deepEqual(ours(byCourse.json.items), [otherCourse.id]);
+  assert.equal(byCourse.json.total, 1);
+
+  const all = await list("bylaw_code=all&page_size=100");
+  const asc = ours(all.json.items);
+  const desc = ours((await list("sort=-course_code&page_size=100")).json.items);
+  assert.deepEqual(desc, [...asc].reverse());
+
+  const paged = await list("page_size=1&page=2");
+  assert.equal(paged.json.page, 2);
+  assert.equal(paged.json.page_size, 1);
+  assert.equal(paged.json.items.length, 1);
+  assert.equal(paged.json.total, all.json.total);
+
+  assert.equal((await list("sort=password_hash")).status, 400);
+  assert.equal((await list("page_size=500")).status, 400);
 });
