@@ -11,7 +11,8 @@ import {
   signupLookup,
   signupSchema,
 } from "../controllers/auth.controller.js";
-import { authenticate } from "../middleware/auth.js";
+import { academicData } from "../controllers/student.controller.js";
+import { authenticate, requireRole } from "../middleware/auth.js";
 import { authRateLimit } from "../middleware/rateLimit.js";
 import { validate } from "../middleware/validate.js";
 
@@ -49,3 +50,10 @@ apiRouter.patch(
   onboarding,
 );
 
+// Student only
+apiRouter.get(
+  "/student/academic-data",
+  authenticate,
+  requireRole("student"),
+  academicData,
+);
