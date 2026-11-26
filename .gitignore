@@ -11,6 +11,8 @@ node_modules/
 
 # real student data exports never enter the repo
 *.csv
+*.xlsx
+source-files/
 
 # Node.js
 npm-debug.log*
