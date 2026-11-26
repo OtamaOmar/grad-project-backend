@@ -94,7 +94,7 @@ before(async () => {
   );
   const studentRow = (
     await pool.query(
-      "SELECT id FROM student WHERE university_id NOT LIKE 'ZZ-%' AND id NOT IN (SELECT student_id FROM app_user WHERE student_id IS NOT NULL) LIMIT 1",
+      "SELECT id FROM student WHERE university_id NOT LIKE 'ZZ-%' AND id NOT IN (SELECT student_id FROM app_user WHERE student_id IS NOT NULL) ORDER BY id LIMIT 1",
     )
   ).rows[0];
   await pool.query(
