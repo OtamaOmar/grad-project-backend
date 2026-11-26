@@ -20,19 +20,21 @@ export async function findCourseWithComponents(courseId) {
   return rows[0] ?? null;
 }
 
-// The forecast row to compare against. If the coordinator named one, it must be for this
-// course and term. Otherwise the newest stored forecast row for the course and term is
-// used. Returns null when there is none (then nothing is compared).
+// The forecast row to compare against. If the coordinator named one, it must match the
+// course and term they sent (either may be left out: the row then supplies it).
+// Without a named row, the newest stored forecast row for the course and term is used.
+// Returns null when there is none (then nothing is compared).
 export async function findForecastRow(termId, courseId, forecastId) {
   const { rows } = await query(
     `SELECT id, academic_term_id, course_id, predicted_headcount,
             implied_lecture_sections, implied_tutorial_sections, implied_lab_sections
        FROM offering_forecast
-      WHERE academic_term_id = $1 AND course_id = $2
+      WHERE ($1::bigint IS NULL OR academic_term_id = $1)
+        AND ($2::bigint IS NULL OR course_id = $2)
         AND ($3::bigint IS NULL OR id = $3)
       ORDER BY created_at DESC, id DESC
       LIMIT 1`,
-    [termId, courseId, forecastId ?? null],
+    [termId ?? null, courseId ?? null, forecastId ?? null],
   );
   return rows[0] ?? null;
 }
@@ -94,29 +96,82 @@ export async function saveDecision({
   return rows[0].id;
 }
 
-// Every decision for a term (or one decision by id), with the course, its components and
-// the implied sections of the forecast row the decision cites.
-export async function listDecisions({ termId, decisionId }) {
-  const { rows } = await query(
-    `SELECT d.id, d.academic_term_id, d.course_id, d.offering_forecast_id,
-            d.lecture_open, d.tutorial_open, d.lab_open, d.decision_notes,
-            d.approved_by_user_id, d.approved_by_name, d.approved_at,
-            d.created_at, d.updated_at,
-            c.code AS course_code, c.title AS course_title, b.code AS bylaw_code,
-            COALESCE((SELECT array_agg(cc.component_type ORDER BY cc.component_type)
-                        FROM course_component cc WHERE cc.course_id = c.id), '{}') AS components,
-            f.predicted_headcount,
-            f.implied_lecture_sections, f.implied_tutorial_sections, f.implied_lab_sections
+// Columns the list can be sorted by. Only these names reach the SQL, so the sort value
+// from the browser can never inject anything.
+export const SORT_COLUMNS = {
+  course_code: "c.code",
+  course_title: "c.title",
+  bylaw_code: "b.code",
+  predicted_headcount: "f.predicted_headcount",
+  approved_by_name: "d.approved_by_name",
+  approved_at: "d.approved_at",
+  updated_at: "d.updated_at",
+  created_at: "d.created_at",
+};
+
+// Decisions with the course, its components and the implied sections of the forecast row
+// each decision cites. Filters: term, one decision id, search text q (course code or title),
+// bylaw code, course id. Sorted by `sort` ("-" in front = descending), then paged.
+// Returns { items, total, page, page_size }, where total counts every match.
+export async function listDecisions({
+  termId,
+  decisionId,
+  q,
+  bylawCode,
+  courseId,
+  sort = "course_code",
+  page = 1,
+  pageSize = 10,
+}) {
+  const from = `
        FROM offering_decision d
        JOIN course c ON c.id = d.course_id
        JOIN bylaw b ON b.id = c.bylaw_id
        LEFT JOIN offering_forecast f ON f.id = d.offering_forecast_id
       WHERE ($1::bigint IS NULL OR d.academic_term_id = $1)
         AND ($2::bigint IS NULL OR d.id = $2)
-      ORDER BY c.code`,
-    [termId ?? null, decisionId ?? null],
-  );
-  return rows.map(toDecisionRow);
+        AND ($3::text IS NULL
+             OR position(lower($3) IN lower(c.code)) > 0
+             OR position(lower($3) IN lower(c.title)) > 0)
+        AND ($4::text IS NULL OR b.code = $4)
+        AND ($5::bigint IS NULL OR d.course_id = $5)`;
+  const filters = [
+    termId ?? null,
+    decisionId ?? null,
+    q || null,
+    bylawCode ?? null,
+    courseId ?? null,
+  ];
+
+  const descending = sort.startsWith("-");
+  const column = SORT_COLUMNS[descending ? sort.slice(1) : sort];
+  const order = `${column} ${descending ? "DESC" : "ASC"} NULLS LAST, d.id`;
+
+  const [count, pageRows] = await Promise.all([
+    query(`SELECT count(*)::int AS total ${from}`, filters),
+    query(
+      `SELECT d.id, d.academic_term_id, d.course_id, d.offering_forecast_id,
+              d.lecture_open, d.tutorial_open, d.lab_open, d.decision_notes,
+              d.approved_by_user_id, d.approved_by_name, d.approved_at,
+              d.created_at, d.updated_at,
+              c.code AS course_code, c.title AS course_title, b.code AS bylaw_code,
+              COALESCE((SELECT array_agg(cc.component_type ORDER BY cc.component_type)
+                          FROM course_component cc WHERE cc.course_id = c.id), '{}') AS components,
+              f.predicted_headcount,
+              f.implied_lecture_sections, f.implied_tutorial_sections, f.implied_lab_sections
+       ${from}
+       ORDER BY ${order}
+       LIMIT $6 OFFSET $7`,
+      [...filters, pageSize, (page - 1) * pageSize],
+    ),
+  ]);
+
+  return {
+    items: pageRows.rows.map(toDecisionRow),
+    total: count.rows[0].total,
+    page,
+    page_size: pageSize,
+  };
 }
 
 // One decision as the frontend sees it. Ids come out of Postgres as text, so they are
