@@ -12,6 +12,11 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  getUsers,
+  getUsersSummary,
+  usersQuerySchema,
+} from "../controllers/admin.controller.js";
+import {
   decisionSchema,
   getDecisions,
   listQuerySchema,
@@ -78,4 +83,14 @@ apiRouter.get(
   requireRole("coordinator"),
   validate({ query: listQuerySchema }),
   getDecisions,
+);
+
+// Admin only (read-only for now)
+const admin = [authenticate, requireRole("admin")];
+apiRouter.get("/admin/users/summary", ...admin, getUsersSummary);
+apiRouter.get(
+  "/admin/users",
+  ...admin,
+  validate({ query: usersQuerySchema }),
+  getUsers,
 );

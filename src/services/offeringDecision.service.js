@@ -1,4 +1,5 @@
 import { query } from "../config/db.js";
+import { orderBy } from "../utils/list.js";
 
 // The coordinator's opening decision per course and term: three yes/no flags
 // (lecture, tutorial, lab). It never stores section counts. Implied sections are read
@@ -96,8 +97,7 @@ export async function saveDecision({
   return rows[0].id;
 }
 
-// Columns the list can be sorted by. Only these names reach the SQL, so the sort value
-// from the browser can never inject anything.
+// Columns the decision list can be sorted by (see utils/list.js).
 export const SORT_COLUMNS = {
   course_code: "c.code",
   course_title: "c.title",
@@ -143,9 +143,7 @@ export async function listDecisions({
     courseId ?? null,
   ];
 
-  const descending = sort.startsWith("-");
-  const column = SORT_COLUMNS[descending ? sort.slice(1) : sort];
-  const order = `${column} ${descending ? "DESC" : "ASC"} NULLS LAST, d.id`;
+  const order = orderBy(sort, SORT_COLUMNS, "d.id");
 
   const [count, pageRows] = await Promise.all([
     query(`SELECT count(*)::int AS total ${from}`, filters),

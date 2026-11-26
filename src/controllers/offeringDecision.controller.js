@@ -8,6 +8,7 @@ import {
   saveDecision,
 } from "../services/offeringDecision.service.js";
 import { AppError } from "../utils/AppError.js";
+import { listFields, optionalFilter } from "../utils/list.js";
 
 const id = z.coerce.number().int().positive();
 const flag = z.boolean().nullable().default(null);
@@ -35,25 +36,12 @@ export const decisionSchema = z
     },
   );
 
-// "course_code", "-course_code", "approved_at", "-approved_at", ...
-const sortValues = Object.keys(SORT_COLUMNS).flatMap((key) => [key, `-${key}`]);
-
-// GET /api/offering-decisions: the term is required; the rest narrows, sorts and pages
-// the list the same way the frontend mock does. bylaw_code "all" means no filter.
 export const listQuerySchema = z.strictObject({
   termId: id,
   q: z.string().trim().max(100).optional(),
-  bylaw_code: z
-    .string()
-    .max(32)
-    .optional()
-    .transform((value) =>
-      value === "all" || value === "" ? undefined : value,
-    ),
+  bylaw_code: optionalFilter(),
   course_id: id.optional(),
-  sort: z.enum(sortValues).default("course_code"),
-  page: z.coerce.number().int().min(1).default(1),
-  page_size: z.coerce.number().int().min(1).max(100).default(10),
+  ...listFields(SORT_COLUMNS, "course_code"),
 });
 
 // 400 in the same shape as other validation errors, pointing at one field.
