@@ -36,7 +36,7 @@ A successful response never contains `error`. A `204` has no body.
 | 401 | `INVALID_CREDENTIALS` | Login with a wrong username or password. The same answer for both, so it does not reveal which accounts exist |
 | 403 | `FORBIDDEN` | Signed in, but the role (read from the database) may not use the route. Also a student account that is not linked to a student row |
 | 403 | `ACCOUNT_INACTIVE` | Login with the right password on a deactivated account |
-| 404 | `NOT_FOUND` | No route matches the method and path |
+| 404 | `NOT_FOUND` | No route matches the method and path, or the record a route asks for (for example a data gap id) does not exist |
 | 404 | `STUDENT_NOT_FOUND` | Signup with a university ID that is not in `student` |
 | 409 | `ALREADY_LINKED` | Signup for a student who already has an account |
 | 409 | `USERNAME_TAKEN` | Signup with a username another account uses |
