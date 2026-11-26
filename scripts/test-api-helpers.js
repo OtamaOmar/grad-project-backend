@@ -3,9 +3,9 @@
 
 // Requires a disposable, migrated database. Never load .env for the target.
 const url = process.env.TEST_DATABASE_URL;
-if (!url || !/_(test|dev)$/.test(new URL(url).pathname)) {
+if (!url || !/_test$/.test(new URL(url).pathname)) {
   throw new Error(
-    "Set TEST_DATABASE_URL to a migrated database ending in _test or _dev",
+    "Set TEST_DATABASE_URL to a migrated database ending in _test",
   );
 }
 process.env.DATABASE_URL = url;
@@ -17,10 +17,10 @@ export const { pool } = await import("../src/config/db.js");
 let server;
 let base;
 
-// Starts the API on a free port. Refuses to run unless the database name ends in _test/_dev.
+// Starts the API on a free port. Refuses to run unless the database name ends in _test.
 export async function startServer() {
   const { rows } = await pool.query("SELECT current_database() AS name");
-  if (!/_(test|dev)$/.test(rows[0].name)) {
+  if (!/_test$/.test(rows[0].name)) {
     throw new Error(`Refusing to test against ${rows[0].name}`);
   }
   server = createApp().listen(0);
