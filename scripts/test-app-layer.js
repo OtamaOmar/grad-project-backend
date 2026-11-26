@@ -1,56 +1,25 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-// Requires a disposable, migrated database. Never load .env for the target.
-const url = process.env.TEST_DATABASE_URL;
-if (!url || !/_(test|dev)$/.test(new URL(url).pathname)) {
-  throw new Error(
-    "Set TEST_DATABASE_URL to a migrated database ending in _test or _dev",
-  );
-}
-process.env.DATABASE_URL = url;
-process.env.JWT_SECRET ||= "test-secret-test-secret-test-secret-1234";
+import {
+  call,
+  pool,
+  sessionCookie,
+  startServer,
+  stopServer,
+} from "./test-api-helpers.js";
 
-const { createApp } = await import("../src/app.js");
-const { pool } = await import("../src/config/db.js");
 const { hashPassword } = await import("../src/services/user.service.js");
 const { requireRole } = await import("../src/middleware/auth.js");
 const { SESSION_COOKIE } = await import("../src/services/session.service.js");
 
 const USERNAME = "zz_test_app_layer";
 const PASSWORD = "correct-horse-battery";
-let server;
-let base;
 let userId;
-
-// Sends one request to the test server and returns status, headers and parsed JSON.
-async function call(method, path, { body, cookie, raw } = {}) {
-  const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (cookie) headers.Cookie = cookie;
-  const res = await fetch(`${base}${path}`, {
-    method,
-    headers,
-    body: raw ?? (body === undefined ? undefined : JSON.stringify(body)),
-  });
-  const text = await res.text();
-  return {
-    status: res.status,
-    headers: res.headers,
-    json: text ? JSON.parse(text) : null,
-  };
-}
-
-// Pulls "acops_session=<token>" out of a response so the next request can send it back.
-function sessionCookie(res) {
-  const header = res.headers.get("set-cookie") ?? "";
-  return header.split(";")[0];
-}
 
 // Creates one test coordinator and starts the API on a free port.
 before(async () => {
-  const { rows } = await pool.query("SELECT current_database() AS name");
-  assert.match(rows[0].name, /_(test|dev)$/);
+  await startServer();
   await pool.query("DELETE FROM app_user WHERE username = $1", [USERNAME]);
   const inserted = await pool.query(
     `INSERT INTO app_user (role, username, password_hash, full_name)
@@ -58,16 +27,12 @@ before(async () => {
     [USERNAME, await hashPassword(PASSWORD)],
   );
   userId = Number(inserted.rows[0].id);
-  server = createApp().listen(0);
-  await new Promise((resolve) => server.once("listening", resolve));
-  base = `http://127.0.0.1:${server.address().port}`;
 });
 
-// Stops the server and deletes the test user.
+// Deletes the test user and stops the server.
 after(async () => {
-  server?.close();
   await pool.query("DELETE FROM app_user WHERE username = $1", [USERNAME]);
-  await pool.end();
+  await stopServer();
 });
 
 test("GET /health answers ok without a session", async () => {
