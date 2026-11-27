@@ -5,11 +5,13 @@ import {
   logout,
   lookupSchema,
   me,
+  changePasswordSchema,
   onboarding,
   onboardingSchema,
   signup,
   signupLookup,
   signupSchema,
+  updatePassword,
 } from "../controllers/auth.controller.js";
 import {
   anyListQuerySchema,
@@ -178,6 +180,13 @@ apiRouter.patch(
   authenticate,
   validate({ body: onboardingSchema }),
   onboarding,
+);
+apiRouter.patch(
+  "/me/password",
+  authRateLimit,
+  authenticate,
+  validate({ body: changePasswordSchema }),
+  updatePassword,
 );
 
 // Student only

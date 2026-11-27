@@ -180,3 +180,57 @@ test("requireRole allows a listed role and throws 403 otherwise", () => {
   });
   assert.throws(() => guard({}, {}, () => {}), { status: 401 });
 });
+
+test("change password: checks the current one, ends other sessions, keeps this one", async () => {
+  const login = await call("POST", "/api/auth/login", {
+    body: { username: USERNAME, password: PASSWORD },
+  });
+  const oldCookie = sessionCookie(login);
+  const change = (body) =>
+    call("PATCH", "/api/me/password", { cookie: oldCookie, body });
+
+  const wrong = await change({
+    current_password: "nope-nope",
+    new_password: "brand-new-pass",
+  });
+  assert.equal(wrong.status, 400);
+  assert.equal(wrong.json.error.details[0].code, "incorrect");
+  const same = await change({
+    current_password: PASSWORD,
+    new_password: PASSWORD,
+  });
+  assert.equal(same.status, 400);
+  const short = await change({
+    current_password: PASSWORD,
+    new_password: "short",
+  });
+  assert.equal(short.status, 400);
+
+  const ok = await change({
+    current_password: PASSWORD,
+    new_password: "brand-new-pass",
+  });
+  assert.equal(ok.status, 200);
+  const newCookie = sessionCookie(ok);
+  assert.equal(
+    (await call("GET", "/api/me", { cookie: oldCookie })).status,
+    401,
+  );
+  assert.equal(
+    (await call("GET", "/api/me", { cookie: newCookie })).status,
+    200,
+  );
+
+  const relogin = await call("POST", "/api/auth/login", {
+    body: { username: USERNAME, password: "brand-new-pass" },
+  });
+  assert.equal(relogin.status, 200);
+  const { rows } = await pool.query(
+    "SELECT count(*)::int AS n FROM audit_event WHERE action = 'auth.password_changed' AND entity_label = $1",
+    [USERNAME],
+  );
+  assert.equal(rows[0].n, 1);
+  await pool.query("DELETE FROM audit_event WHERE entity_label = $1", [
+    USERNAME,
+  ]);
+});
