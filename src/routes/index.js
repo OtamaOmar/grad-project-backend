@@ -33,6 +33,13 @@ import {
   updateBylawSchema,
 } from "../controllers/adminBylaws.controller.js";
 import {
+  createCreditLimitSchema,
+  deleteCreditLimit,
+  patchCreditLimit,
+  postCreditLimit,
+  postCreditLimitOrder,
+  reorderCreditLimitsSchema,
+  updateCreditLimitSchema,
   creditLimitsQuerySchema,
   dataGapsQuerySchema,
   getCreditLimits,
@@ -146,6 +153,25 @@ apiRouter.get(
   validate({ query: creditLimitsQuerySchema }),
   getCreditLimits,
 );
+apiRouter.post(
+  "/admin/credit-limits/reorder",
+  ...admin,
+  validate({ body: reorderCreditLimitsSchema }),
+  postCreditLimitOrder,
+);
+apiRouter.post(
+  "/admin/credit-limits",
+  ...admin,
+  validate({ body: createCreditLimitSchema }),
+  postCreditLimit,
+);
+apiRouter.patch(
+  "/admin/credit-limits/:id",
+  ...admin,
+  validate({ body: updateCreditLimitSchema }),
+  patchCreditLimit,
+);
+apiRouter.delete("/admin/credit-limits/:id", ...admin, deleteCreditLimit);
 apiRouter.get("/admin/data-gaps/summary", ...admin, getDataGapsSummary);
 apiRouter.get(
   "/admin/data-gaps",

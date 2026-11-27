@@ -23,7 +23,15 @@ let newUserPassword; // the one-time password of the staff account created below
 
 // Removes the accounts, the test bylaw and its audit entries this test created.
 async function cleanUp() {
-  await pool.query("DELETE FROM bylaw WHERE code = 'zz_test_bylaw'");
+  await pool.query(
+    "DELETE FROM credit_limit WHERE bylaw_id IN (SELECT id FROM bylaw WHERE code = 'zz_cl_bylaw')",
+  );
+  await pool.query(
+    "DELETE FROM bylaw WHERE code IN ('zz_test_bylaw', 'zz_cl_bylaw')",
+  );
+  await pool.query(
+    "DELETE FROM audit_event WHERE entity_label LIKE 'zz_cl_bylaw%'",
+  );
   await pool.query(
     "DELETE FROM academic_term WHERE academic_year IN (2098, 2099)",
   );
@@ -582,4 +590,102 @@ test("users: edit, deactivate (ends sessions) and the self-protection rules", as
     ["user.created", "user.updated", "user.deactivated"],
   );
   assert.equal(audit[2].severity, "warning");
+});
+
+test("credit limits: create, edit, reorder and remove rules, audited", async () => {
+  const bylawId = (
+    await pool.query(
+      `INSERT INTO bylaw (code, name, graduation_credits, pass_percentage, source_reference)
+       VALUES ('zz_cl_bylaw', 'Credit-limit test bylaw', 130, 50, 'Test fixture')
+       RETURNING id::int AS id`,
+    )
+  ).rows[0].id;
+  const create = (body) =>
+    call("POST", "/api/admin/credit-limits", { cookie: adminCookie, body });
+  const base = {
+    bylaw_id: bylawId,
+    term_type: "fall_spring",
+    population: "default",
+    source_reference: "Test fixture",
+  };
+
+  const first = await create({
+    ...base,
+    priority: 1,
+    max_cgpa: "2",
+    max_credits: 12,
+  });
+  assert.equal(first.status, 201);
+  assert.equal(first.json.category, "remedial");
+  const second = await create({ ...base, priority: 2, max_credits: "18" });
+  assert.equal(second.json.rule_kind, "maximum");
+
+  assert.equal(
+    (await create({ ...base, priority: 2, max_credits: 19 })).json.error.code,
+    "PRIORITY_TAKEN",
+  );
+  const badCgpa = await create({
+    ...base,
+    priority: 3,
+    min_cgpa: 3,
+    max_cgpa: 2,
+  });
+  assert.equal(badCgpa.status, 400);
+  assert.equal(badCgpa.json.error.details[0].path, "max_cgpa");
+  assert.equal(
+    (await create({ ...base, priority: 3, min_credits: 20, max_credits: 18 }))
+      .status,
+    400,
+  );
+
+  const edited = await call(
+    "PATCH",
+    `/api/admin/credit-limits/${second.json.id}`,
+    {
+      cookie: adminCookie,
+      body: { max_credits: 19 },
+    },
+  );
+  assert.equal(edited.json.max_credits, 19);
+
+  const reordered = await call("POST", "/api/admin/credit-limits/reorder", {
+    cookie: adminCookie,
+    body: { bylaw_id: bylawId, ordered_ids: [second.json.id, first.json.id] },
+  });
+  assert.equal(reordered.status, 200);
+  assert.deepEqual(
+    reordered.json.items.map((r) => [r.id, r.priority]),
+    [
+      [second.json.id, 1],
+      [first.json.id, 2],
+    ],
+  );
+  const notAll = await call("POST", "/api/admin/credit-limits/reorder", {
+    cookie: adminCookie,
+    body: { bylaw_id: bylawId, ordered_ids: [first.json.id] },
+  });
+  assert.equal(notAll.status, 400);
+
+  const removed = await call(
+    "DELETE",
+    `/api/admin/credit-limits/${first.json.id}`,
+    {
+      cookie: adminCookie,
+    },
+  );
+  assert.equal(removed.status, 204);
+
+  const { rows: audit } = await pool.query(
+    "SELECT action FROM audit_event WHERE entity_label LIKE 'zz_cl_bylaw%' ORDER BY id",
+  );
+  assert.deepEqual(
+    audit.map((a) => a.action),
+    [
+      "credit_limit.created",
+      "credit_limit.created",
+      "credit_limit.updated",
+      "credit_limit.reordered",
+      "credit_limit.deleted",
+    ],
+  );
 });
