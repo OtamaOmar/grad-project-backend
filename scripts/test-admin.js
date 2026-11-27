@@ -601,7 +601,7 @@ test("users: edit, deactivate (ends sessions) and the self-protection rules", as
   assert.equal((await patch(studentId, { role: "advisor" })).status, 400);
 
   const { rows: audit } = await pool.query(
-    "SELECT action, severity FROM audit_event WHERE entity_label = 'zz_test_admin_new' ORDER BY id",
+    "SELECT action, severity FROM audit_event WHERE entity_label = 'zz_test_admin_new' AND action LIKE 'user.%' ORDER BY id",
   );
   assert.deepEqual(
     audit.map((a) => a.action),
@@ -1169,4 +1169,64 @@ test("study plans: real sheets and slots, add/move/remove a slot, audited", asyn
     "SELECT count(*)::int AS n FROM elective_pool",
   );
   assert.equal(pools.json.total, poolCount[0].n);
+});
+
+test("audit: sign-ins are logged; list, detail and a safe CSV export", async () => {
+  await call("POST", "/api/auth/login", {
+    body: { username: ADMIN, password: "wrong-password" },
+  });
+  const ok = await call("POST", "/api/auth/login", {
+    body: { username: ADMIN, password: PASSWORD },
+  });
+  assert.equal(ok.status, 200);
+
+  const failed = await call(
+    "GET",
+    `/api/admin/audit?action=auth.login_failed&q=${ADMIN}`,
+    { cookie: adminCookie },
+  );
+  assert.ok(failed.json.total >= 1);
+  assert.equal(failed.json.items[0].username_attempted, ADMIN);
+  assert.equal(failed.json.items[0].outcome, "failure");
+  const signIns = await call(
+    "GET",
+    `/api/admin/audit?action=auth.login&actor=${ADMIN}`,
+    {
+      cookie: adminCookie,
+    },
+  );
+  assert.ok(signIns.json.items.every((e) => e.actor_username === ADMIN));
+  assert.match(signIns.json.items[0].event_code, /^EVT-\d{5,}$/);
+  assert.match(signIns.json.items[0].ip_address ?? "x.x", /x\.x$/);
+
+  const detail = await call(
+    "GET",
+    `/api/admin/audit/${signIns.json.items[0].id}`,
+    {
+      cookie: adminCookie,
+    },
+  );
+  assert.ok(Array.isArray(detail.json.related_events));
+
+  const summary = await call("GET", "/api/admin/audit/summary?range_days=7", {
+    cookie: adminCookie,
+  });
+  assert.equal(summary.json.range_days, 7);
+  assert.ok(summary.json.failed_logins >= 1);
+
+  // A value starting with = is written so a spreadsheet will not run it as a formula.
+  await pool.query(
+    `INSERT INTO audit_event (action, category, summary, entity_label)
+     VALUES ('audit.exported', 'system', '=HYPERLINK("x")', 'zz_csv_probe')`,
+  );
+  const csv = await call("GET", "/api/admin/audit/export?q=zz_csv_probe", {
+    cookie: adminCookie,
+  });
+  assert.equal(csv.status, 200);
+  assert.match(csv.headers.get("content-type"), /text\/csv/);
+  assert.ok(csv.text.startsWith("event_code,occurred_at"));
+  assert.ok(csv.text.includes(`"'=HYPERLINK(""x"")"`));
+  await pool.query(
+    "DELETE FROM audit_event WHERE entity_label = 'zz_csv_probe'",
+  );
 });

@@ -48,7 +48,9 @@ export function maskIp(ip) {
   return parts.length === 4 ? `${parts[0]}.${parts[1]}.x.x` : null;
 }
 
-// Records one event. actor is the signed-in app_user row (req.user); entity is
+// Records one event. The actor is the signed-in user (req.user), or extra.actor when the
+// request has no session yet (a sign-in); extra.usernameAttempted keeps the name typed in
+// a failed sign-in. entity is
 // { type, id, label }; details holds what changed, for example { name: { from, to } }.
 export async function recordAudit(
   client,
@@ -60,13 +62,13 @@ export async function recordAudit(
 ) {
   const category = AUDIT_ACTIONS[action];
   if (!category) throw new Error(`Unknown audit action: ${action}`);
-  const actor = req.user ?? null;
+  const actor = extra.actor ?? req.user ?? null;
   await client.query(
     `INSERT INTO audit_event
        (actor_user_id, actor_username, actor_name, actor_role, action, category,
         entity_type, entity_id, entity_label, severity, outcome, summary, details,
-        ip_address, request_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        ip_address, request_id, username_attempted)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
     [
       actor?.id ?? null,
       actor?.username ?? null,
@@ -83,6 +85,7 @@ export async function recordAudit(
       extra.details ?? null,
       maskIp(req.ip),
       `req_${randomUUID().slice(0, 12)}`,
+      extra.usernameAttempted ?? null,
     ],
   );
 }
