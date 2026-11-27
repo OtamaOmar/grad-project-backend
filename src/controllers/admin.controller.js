@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dashboard } from "../services/adminDashboard.service.js";
 import {
   createCreditLimit,
   creditLimitsSummary,
@@ -273,4 +274,9 @@ export async function postDataGap(req, res) {
 export async function patchDataGap(req, res) {
   const id = z.coerce.number().int().positive().parse(req.params.id);
   res.json(await updateDataGap(req, id, req.body));
+}
+
+// GET /api/admin/dashboard: the summary across every admin area.
+export async function getDashboard(req, res) {
+  res.json(await dashboard());
 }
