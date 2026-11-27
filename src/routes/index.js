@@ -12,6 +12,13 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  creditLimitsQuerySchema,
+  dataGapsQuerySchema,
+  getCreditLimits,
+  getCreditLimitsSummary,
+  getDataGapById,
+  getDataGaps,
+  getDataGapsSummary,
   getUsers,
   getUsersSummary,
   usersQuerySchema,
@@ -95,3 +102,18 @@ apiRouter.get(
   validate({ query: usersQuerySchema }),
   getUsers,
 );
+apiRouter.get("/admin/credit-limits/summary", ...admin, getCreditLimitsSummary);
+apiRouter.get(
+  "/admin/credit-limits",
+  ...admin,
+  validate({ query: creditLimitsQuerySchema }),
+  getCreditLimits,
+);
+apiRouter.get("/admin/data-gaps/summary", ...admin, getDataGapsSummary);
+apiRouter.get(
+  "/admin/data-gaps",
+  ...admin,
+  validate({ query: dataGapsQuerySchema }),
+  getDataGaps,
+);
+apiRouter.get("/admin/data-gaps/:id", ...admin, getDataGapById);

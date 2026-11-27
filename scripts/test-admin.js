@@ -125,3 +125,109 @@ test("users list: rows look like the mock, search and filters work", async () =>
 
   assert.equal((await list("sort=password_hash")).status, 400);
 });
+
+test("credit limits: the seeded rows, in bylaw and priority order", async () => {
+  const list = (query = "") =>
+    call("GET", `/api/admin/credit-limits?${query}`, { cookie: adminCookie });
+  const all = await list();
+  assert.equal(all.status, 200);
+  assert.equal(all.json.page_size, 100);
+  const { rows } = await pool.query(
+    "SELECT count(*)::int AS n FROM credit_limit",
+  );
+  assert.equal(all.json.total, rows[0].n);
+
+  // Each bylaw's rules come out in priority order.
+  const old = all.json.items.filter((row) => row.bylaw_code === "old_cs");
+  assert.deepEqual(
+    old.map((row) => row.priority),
+    [...old.map((row) => row.priority)].sort((a, b) => a - b),
+  );
+  for (const row of all.json.items) {
+    assert.equal(row.data_gap_id, null);
+    assert.equal(row.is_unstated, row.rule_kind === "unstated");
+    if (row.max_credits !== null) assert.equal(row.rule_kind, "maximum");
+  }
+
+  const summer = await list("term_type=summer");
+  assert.ok(summer.json.items.every((row) => row.term_type === "summer"));
+  const bylaw2025 = await list("bylaw_code=bylaw_2025&sort=-priority");
+  const priorities = bylaw2025.json.items.map((row) => row.priority);
+  assert.deepEqual(
+    priorities,
+    [...priorities].sort((a, b) => b - a),
+  );
+});
+
+test("credit limits summary matches the rows", async () => {
+  const res = await call("GET", "/api/admin/credit-limits/summary", {
+    cookie: adminCookie,
+  });
+  assert.equal(res.status, 200);
+  const { total, stated_count, unstated_count, by_bylaw, open_gaps } = res.json;
+  assert.equal(stated_count + unstated_count, total);
+  assert.equal(
+    by_bylaw.reduce((sum, bylaw) => sum + bylaw.row_count, 0),
+    total,
+  );
+  assert.ok(
+    open_gaps.every((gap) => gap.affected_entity.startsWith("credit_limit")),
+  );
+});
+
+test("data gaps: the real register; severity and import links stay null", async () => {
+  const list = (query = "") =>
+    call("GET", `/api/admin/data-gaps?${query}`, { cookie: adminCookie });
+  const first = await list("page_size=5");
+  assert.equal(first.status, 200);
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM data_gap");
+  assert.equal(first.json.total, rows[0].n);
+  const gap = first.json.items[0];
+  assert.match(gap.gap_code, /^GAP-\d{3,}$/);
+  assert.equal(gap.severity, null);
+  assert.equal(gap.import_issue_count, null);
+  assert.ok(Array.isArray(gap.bylaw_scope));
+
+  // An old_ category always maps to the old bylaw.
+  const all = await list("page_size=100");
+  for (const row of all.json.items) {
+    if (row.category.startsWith("old_"))
+      assert.ok(row.bylaw_scope.includes("old_cs"));
+    if (row.category.startsWith("new_"))
+      assert.ok(row.bylaw_scope.includes("bylaw_2025"));
+  }
+
+  const search = await list("q=CSCI%20490&page_size=100");
+  assert.ok(search.json.total >= 1);
+  assert.equal((await list("severity=high")).json.total, 0);
+
+  const detail = await call("GET", `/api/admin/data-gaps/${gap.id}`, {
+    cookie: adminCookie,
+  });
+  assert.equal(detail.json.id, gap.id);
+  assert.deepEqual(detail.json.import_issues, []);
+  assert.equal(
+    (await call("GET", "/api/admin/data-gaps/999999", { cookie: adminCookie }))
+      .status,
+    404,
+  );
+  assert.equal(
+    (await call("GET", "/api/admin/data-gaps/abc", { cookie: adminCookie }))
+      .status,
+    400,
+  );
+});
+
+test("data gaps summary counts the register", async () => {
+  const res = await call("GET", "/api/admin/data-gaps/summary", {
+    cookie: adminCookie,
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.json.open + res.json.resolved, res.json.total);
+  assert.equal(res.json.open_by_severity, null);
+  assert.equal(res.json.linked_import_issues, null);
+  assert.equal(
+    res.json.by_category.reduce((sum, c) => sum + c.open + c.resolved, 0),
+    res.json.total,
+  );
+});
