@@ -3,7 +3,7 @@
 Phase 1 HTTP surface: who may call what, how identity is taken, and how errors and explanations behave.
 
 Updated 2026-11-27. Owner: Omar. Every change needs Omar's review; REST and error-envelope changes also need Backend B (Ayman).
-Related: [errors.md](../contracts/errors.md), [forecast-io.md](forecast-io.md), [evidence-format.md](evidence-format.md), [database-design.md](database-design.md).
+Related: [errors.md](../contracts/errors.md), [forecast-io.md](forecast-io.md), [evidence-format.md](evidence-format.md), [database-design.md](database-design.md), [frontend-api-inventory.md](frontend-api-inventory.md) (every call the frontend makes and its status).
 
 Each route below is marked **Built** (code and tests exist on the branch named) or **Planned** (agreed, not built yet, with its owner).
 
