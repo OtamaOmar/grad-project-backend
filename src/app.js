@@ -17,6 +17,11 @@ export function createApp() {
 
   // Quick "is the API up?" check.
   app.get("/health", (req, res) => res.json({ status: "ok" }));
+  // API answers carry user data: the browser must not keep a copy (for example after logout).
+  app.use("/api", (req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    next();
+  });
   app.use("/api", apiRouter);
 
   app.use(notFound);

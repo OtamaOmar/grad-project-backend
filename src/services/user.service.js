@@ -5,7 +5,7 @@ import { query } from "../config/db.js";
 
 const PUBLIC_COLUMNS = `
   id, role, username, full_name, student_id, birthdate::text AS birthdate,
-  preferred_language, preferred_theme, is_active, onboarded_at`;
+  preferred_language, preferred_theme, is_active, onboarded_at, session_version`;
 
 // Checked when the username does not exist, so a wrong username and a wrong password
 // take about the same time and nobody can find out which accounts exist.
@@ -38,6 +38,14 @@ export async function verifyCredentials(username, password) {
   if (!row || !ok) return null;
   delete row.password_hash;
   return row;
+}
+
+// Ends every session of this user (logout): tokens issued before now stop working.
+export async function revokeSessions(userId) {
+  await query(
+    "UPDATE app_user SET session_version = session_version + 1, updated_at = now() WHERE id = $1",
+    [userId],
+  );
 }
 
 // Turns a plain password into an Argon2id hash for storing in app_user.
