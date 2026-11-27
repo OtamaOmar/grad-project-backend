@@ -42,6 +42,13 @@ A successful response never contains `error`. A `204` has no body.
 | 409 | `USERNAME_TAKEN` | Signup with a username another account uses |
 | 409 | `BYLAW_CODE_TAKEN` | Creating a bylaw with a code another bylaw uses |
 | 409 | `BYLAW_IN_USE` | Deleting a bylaw that courses, programs, limits, grades, bands, plans or students still refer to. `details.related` counts them |
+| 409 | `TERM_EXISTS` / `ACTIVE_TERM_EXISTS` / `TERM_IN_USE` | A term with that year and type exists / another term is already active / a used term's year or type cannot change |
+| 409 | `STAFF_CODE_TAKEN` | Another account has that staff code |
+| 409 | `SELF_DEACTIVATION` / `SELF_ROLE_CHANGE` | An admin tried to deactivate themselves or change their own role |
+| 409 | `PRIORITY_TAKEN` / `CREDIT_LIMIT_IN_USE` | Another rule of the bylaw has that priority / a stored forecast used the rule |
+| 409 | `COURSE_CODE_TAKEN` / `BYLAW_IMMUTABLE` | The bylaw already has that course code / a course cannot move to another bylaw |
+| 409 | `PROGRAM_CODE_TAKEN` / `TRACK_CODE_TAKEN` | The bylaw or program already uses that code |
+| 409 | `SLOT_POSITION_TAKEN` | The plan already has a slot at that year, term and position |
 | 429 | `RATE_LIMITED` | More than 20 auth requests from one IP in 15 minutes |
 | 501 | `NOT_AVAILABLE` | An admin action that needs a pipeline the app does not have yet (file ingestion for imports and snapshots) |
 | 500 | `INTERNAL_ERROR` | An unexpected server error. The cause is logged on the server (stack only) and never sent to the client |
