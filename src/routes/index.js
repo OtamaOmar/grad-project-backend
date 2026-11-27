@@ -12,6 +12,16 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  getGradeScaleById,
+  getGradeScales,
+  getGradeScalesSummary,
+  gradeScalesQuerySchema,
+  patchGradeScale,
+  putGradeEntries,
+  replaceEntriesSchema,
+  updateGradeScaleSchema,
+} from "../controllers/adminGradeScales.controller.js";
+import {
   coursesQuerySchema,
   createCourseSchema,
   deleteRequisite,
@@ -288,4 +298,24 @@ apiRouter.delete(
   "/admin/courses/:id/requisites/:requisiteId",
   ...admin,
   deleteRequisite,
+);
+apiRouter.get("/admin/grade-scales/summary", ...admin, getGradeScalesSummary);
+apiRouter.get(
+  "/admin/grade-scales",
+  ...admin,
+  validate({ query: gradeScalesQuerySchema }),
+  getGradeScales,
+);
+apiRouter.get("/admin/grade-scales/:id", ...admin, getGradeScaleById);
+apiRouter.patch(
+  "/admin/grade-scales/:id",
+  ...admin,
+  validate({ body: updateGradeScaleSchema }),
+  patchGradeScale,
+);
+apiRouter.put(
+  "/admin/grade-scales/:id/entries",
+  ...admin,
+  validate({ body: replaceEntriesSchema }),
+  putGradeEntries,
 );
