@@ -1062,3 +1062,111 @@ test("programs and tracks: real catalog, create and edit, audited", async () => 
     ["program.created", "track.created", "track.updated", "program.updated"],
   );
 });
+
+test("study plans: real sheets and slots, add/move/remove a slot, audited", async () => {
+  const summary = await call("GET", "/api/admin/study-plans/summary", {
+    cookie: adminCookie,
+  });
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM plan_slot");
+  assert.equal(summary.json.slot_count, rows[0].n);
+  assert.equal(summary.json.unreadable_region_count, 0);
+
+  const list = await call(
+    "GET",
+    "/api/admin/study-plans?study_year=1&term_type=fall",
+    {
+      cookie: adminCookie,
+    },
+  );
+  const plan = list.json.items[0];
+  assert.equal(plan.focus_study_year, 1);
+  assert.ok(["complete", "has_gaps"].includes(plan.status));
+
+  const detail = await call("GET", `/api/admin/study-plans/${plan.id}`, {
+    cookie: adminCookie,
+  });
+  assert.ok(
+    detail.json.terms.some((t) => t.study_year === 1 && t.term_type === "fall"),
+  );
+
+  // A course of the plan's bylaw that is not yet in this plan.
+  const course = (
+    await pool.query(
+      `SELECT c.id FROM course c WHERE c.bylaw_id = $1
+         AND c.id NOT IN (SELECT course_id FROM plan_slot WHERE plan_template_id = $2 AND course_id IS NOT NULL)
+       LIMIT 1`,
+      [plan.bylaw_id, plan.id],
+    )
+  ).rows[0].id;
+  const slots = `/api/admin/study-plans/${plan.id}/slots`;
+  const added = await call("POST", slots, {
+    cookie: adminCookie,
+    body: {
+      study_year: 6,
+      term_type: "spring",
+      position: 99,
+      course_id: course,
+      source_reference: "Test",
+    },
+  });
+  assert.equal(added.status, 201);
+  assert.equal(added.json.slot_kind, "course");
+  const taken = await call("POST", slots, {
+    cookie: adminCookie,
+    body: {
+      study_year: 6,
+      term_type: "spring",
+      position: 99,
+      course_id: course,
+      source_reference: "Test",
+    },
+  });
+  assert.equal(taken.json.error.code, "SLOT_POSITION_TAKEN");
+  const both = await call("POST", slots, {
+    cookie: adminCookie,
+    body: {
+      study_year: 6,
+      term_type: "fall",
+      position: 1,
+      course_id: course,
+      elective_pool_id: 1,
+      source_reference: "Test",
+    },
+  });
+  assert.equal(both.status, 400);
+
+  const moved = await call("PATCH", `${slots}/${added.json.id}`, {
+    cookie: adminCookie,
+    body: { position: 98 },
+  });
+  assert.equal(moved.json.position, 98);
+  const removed = await call("DELETE", `${slots}/${added.json.id}`, {
+    cookie: adminCookie,
+  });
+  assert.equal(removed.status, 204);
+
+  const { rows: audit } = await pool.query(
+    "SELECT action FROM audit_event WHERE entity_type = 'plan_template' AND entity_id = $1 AND actor_username = $2 ORDER BY id",
+    [String(plan.id), ADMIN],
+  );
+  assert.deepEqual(
+    audit.map((a) => a.action),
+    [
+      "study_plan.slot_added",
+      "study_plan.slot_updated",
+      "study_plan.slot_removed",
+    ],
+  );
+  await pool.query(
+    "DELETE FROM audit_event WHERE entity_type = 'plan_template' AND actor_username = $1",
+    [ADMIN],
+  );
+
+  const pools = await call("GET", "/api/admin/elective-pools?page_size=100", {
+    cookie: adminCookie,
+  });
+  const { rows: poolCount } = await pool.query(
+    "SELECT count(*)::int AS n FROM elective_pool",
+  );
+  assert.equal(pools.json.total, poolCount[0].n);
+});
