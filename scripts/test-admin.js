@@ -19,6 +19,7 @@ const STUDENT = "zz_test_admin_student";
 let adminCookie;
 let studentCookie;
 let studentUniversityId;
+let newUserPassword; // the one-time password of the staff account created below
 
 // Removes the accounts, the test bylaw and its audit entries this test created.
 async function cleanUp() {
@@ -33,8 +34,11 @@ async function cleanUp() {
     "DELETE FROM audit_event WHERE entity_label = 'zz_test_bylaw'",
   );
   await pool.query("DELETE FROM app_user WHERE username = ANY($1)", [
-    [ADMIN, COORD, STUDENT],
+    [ADMIN, COORD, STUDENT, "zz_test_admin_new"],
   ]);
+  await pool.query(
+    "DELETE FROM audit_event WHERE entity_type = 'app_user' AND entity_label LIKE 'zz_test_admin%'",
+  );
 }
 
 // Creates the accounts, starts the API and signs the admin and the student in.
@@ -458,4 +462,124 @@ test("terms: create and edit with the calendar rules, audited", async () => {
     [String(id)],
   );
   assert.equal(audit[0].action, "term.created");
+});
+
+test("users: create a staff account with a one-time temporary password", async () => {
+  const create = (body) =>
+    call("POST", "/api/admin/users", { cookie: adminCookie, body });
+  const created = await create({
+    full_name: "New Coordinator",
+    username: "zz_test_admin_new",
+    role: "coordinator",
+    staff_code: "ZZ-S-001",
+  });
+  assert.equal(created.status, 201);
+  assert.equal(created.json.display_id, "ZZ-S-001");
+  assert.equal(typeof created.json.temporary_password, "string");
+  assert.ok(created.json.temporary_password.length >= 12);
+  newUserPassword = created.json.temporary_password;
+
+  // The temporary password really signs in, and is never stored in plain text.
+  const login = await call("POST", "/api/auth/login", {
+    body: {
+      username: "zz_test_admin_new",
+      password: created.json.temporary_password,
+    },
+  });
+  assert.equal(login.status, 200);
+  const { rows } = await pool.query(
+    "SELECT password_hash FROM app_user WHERE username = 'zz_test_admin_new'",
+  );
+  assert.notEqual(rows[0].password_hash, created.json.temporary_password);
+
+  assert.equal(
+    (
+      await create({
+        full_name: "X",
+        username: "zz_test_admin_new",
+        role: "advisor",
+      })
+    ).json.error.code,
+    "USERNAME_TAKEN",
+  );
+  assert.equal(
+    (
+      await create({
+        full_name: "X",
+        username: "zz_test_admin_other",
+        role: "advisor",
+        staff_code: "ZZ-S-001",
+      })
+    ).json.error.code,
+    "STAFF_CODE_TAKEN",
+  );
+  assert.equal(
+    (
+      await create({
+        full_name: "X",
+        username: "zz_test_admin_x",
+        role: "student",
+      })
+    ).status,
+    400,
+  );
+});
+
+test("users: edit, deactivate (ends sessions) and the self-protection rules", async () => {
+  const id = (
+    await pool.query(
+      "SELECT id FROM app_user WHERE username = 'zz_test_admin_new'",
+    )
+  ).rows[0].id;
+  const patch = (target, body) =>
+    call("PATCH", `/api/admin/users/${target}`, { cookie: adminCookie, body });
+
+  const renamed = await patch(id, {
+    full_name: "Renamed Coordinator",
+    role: "advisor",
+  });
+  assert.equal(renamed.status, 200);
+  assert.equal(renamed.json.full_name, "Renamed Coordinator");
+  assert.equal(renamed.json.role, "advisor");
+
+  // A session of the user being deactivated stops working at once.
+  const theirLogin = await call("POST", "/api/auth/login", {
+    body: { username: "zz_test_admin_new", password: newUserPassword },
+  });
+  const theirCookie = sessionCookie(theirLogin);
+  assert.equal(
+    (await call("GET", "/api/me", { cookie: theirCookie })).status,
+    200,
+  );
+  const deactivated = await patch(id, { is_active: false });
+  assert.equal(deactivated.json.status, "inactive");
+  assert.equal(
+    (await call("GET", "/api/me", { cookie: theirCookie })).status,
+    401,
+  );
+
+  const myId = (
+    await pool.query("SELECT id FROM app_user WHERE username = $1", [ADMIN])
+  ).rows[0].id;
+  assert.equal(
+    (await patch(myId, { is_active: false })).json.error.code,
+    "SELF_DEACTIVATION",
+  );
+  assert.equal(
+    (await patch(myId, { role: "coordinator" })).json.error.code,
+    "SELF_ROLE_CHANGE",
+  );
+  const studentId = (
+    await pool.query("SELECT id FROM app_user WHERE username = $1", [STUDENT])
+  ).rows[0].id;
+  assert.equal((await patch(studentId, { role: "advisor" })).status, 400);
+
+  const { rows: audit } = await pool.query(
+    "SELECT action, severity FROM audit_event WHERE entity_label = 'zz_test_admin_new' ORDER BY id",
+  );
+  assert.deepEqual(
+    audit.map((a) => a.action),
+    ["user.created", "user.updated", "user.deactivated"],
+  );
+  assert.equal(audit[2].severity, "warning");
 });

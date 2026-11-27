@@ -40,8 +40,12 @@ import {
   getDataGapById,
   getDataGaps,
   getDataGapsSummary,
+  createUserSchema,
   getUsers,
   getUsersSummary,
+  patchUser,
+  postUser,
+  updateUserSchema,
   usersQuerySchema,
 } from "../controllers/admin.controller.js";
 import {
@@ -122,6 +126,18 @@ apiRouter.get(
   ...admin,
   validate({ query: usersQuerySchema }),
   getUsers,
+);
+apiRouter.post(
+  "/admin/users",
+  ...admin,
+  validate({ body: createUserSchema }),
+  postUser,
+);
+apiRouter.patch(
+  "/admin/users/:id",
+  ...admin,
+  validate({ body: updateUserSchema }),
+  patchUser,
 );
 apiRouter.get("/admin/credit-limits/summary", ...admin, getCreditLimitsSummary);
 apiRouter.get(
