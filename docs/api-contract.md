@@ -24,8 +24,10 @@ Roles on `app_user.role`:
 
 ## Session identity
 
-- Login sets a Node-signed JWT (HS256, user id only) in the httpOnly, `SameSite=Strict` cookie `acops_session`. It lasts 8 hours. There are no refresh tokens; the user signs in again. The cookie is `Secure` in production.
-- `authenticate` runs on every route except `GET /health`, `POST /api/auth/signup/lookup`, `POST /api/auth/signup` and `POST /api/auth/login`. It loads the active `app_user` row on every request, so a role change or deactivation applies at once.
+- Login sets a Node-signed JWT (HS256, user id and the user's `session_version`) in the httpOnly, `SameSite=Strict` cookie `acops_session`. It lasts 8 hours. There are no refresh tokens; the user signs in again. The cookie is `Secure` in production.
+- Logout increments `app_user.session_version`, so every token issued before it stops working at once (on every device), even if it was copied. Then the cookie is cleared.
+- Every `/api` response is sent with `Cache-Control: no-store`, so the browser keeps no copy of user data.
+- `authenticate` runs on every route except `GET /health`, `POST /api/auth/signup/lookup`, `POST /api/auth/signup`, `POST /api/auth/login` and `POST /api/auth/logout`. It loads the active `app_user` row on every request and checks the token's `session_version` against it, so a role change, deactivation or logout applies at once.
 - `requireRole` checks the role from that row, never from the token or the client.
 - Bodies and queries are parsed with strict Zod schemas: any key the route does not expect is a `400`. This is how a client-sent `userId` or `approvedBy` is refused.
 - The browser origin allowed to send the cookie is `CORS_ORIGIN` (default `http://localhost:5173`).
@@ -76,7 +78,7 @@ One envelope, defined in [contracts/errors.md](../contracts/errors.md):
 |---|---|---|---|
 | `GET /health` | Public | Built (`feature/backend-application-layer`) | `{ "status": "ok" }` |
 | `POST /api/auth/login` | Public | Built (`feature/backend-application-layer`) | Body `{ username, password }`. Username ignores case and spaces. Sets the session cookie, returns `{ user }`. `401 INVALID_CREDENTIALS`, `403 ACCOUNT_INACTIVE` |
-| `POST /api/auth/logout` | Session | Built (`feature/backend-application-layer`) | Clears the cookie. `204` |
+| `POST /api/auth/logout` | Public | Built (`fix/logout`) | Revokes the session on the server (if the cookie holds a valid token) and clears the cookie. Always `204`, also without a session |
 | `GET /api/me` | Session | Built (`feature/backend-application-layer`) | `{ user }`. Role comes from the database |
 | `POST /api/auth/signup/lookup` | Public | Built (`feature/backend-student-workflow`) | Body `{ university_id }`. Returns `{ university_id, cohort_year }`. `404 STUDENT_NOT_FOUND`, `409 ALREADY_LINKED` |
 | `POST /api/auth/signup` | Public | Built (`feature/backend-student-workflow`) | Body `{ university_id, username, password }`. Username 3-64 of `a-z 0-9 . _ -`; password 8-128. Creates the student account, signs in, `201 { user }`. `404`, `409 ALREADY_LINKED`, `409 USERNAME_TAKEN` |

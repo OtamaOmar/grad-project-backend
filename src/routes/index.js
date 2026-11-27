@@ -51,8 +51,9 @@ apiRouter.post(
   signup,
 );
 
+apiRouter.post("/auth/logout", authRateLimit, logout);
+
 // Session required
-apiRouter.post("/auth/logout", authRateLimit, authenticate, logout);
 apiRouter.get("/me", authenticate, me);
 apiRouter.patch(
   "/me/onboarding",

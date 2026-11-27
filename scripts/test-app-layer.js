@@ -144,19 +144,30 @@ test("inactive account cannot log in (403)", async () => {
   assert.equal(res.json.error.code, "ACCOUNT_INACTIVE");
 });
 
-test("logout clears the cookie and needs a session", async () => {
+test("logout clears the cookie and revokes the token on the server", async () => {
   const login = await call("POST", "/api/auth/login", {
     body: { username: USERNAME, password: PASSWORD },
   });
-  const res = await call("POST", "/api/auth/logout", {
-    cookie: sessionCookie(login),
-  });
+  const cookie = sessionCookie(login);
+  assert.equal((await call("GET", "/api/me", { cookie })).status, 200);
+
+  const res = await call("POST", "/api/auth/logout", { cookie });
   assert.equal(res.status, 204);
   assert.match(
     res.headers.get("set-cookie"),
     new RegExp(`${SESSION_COOKIE}=;`),
   );
-  assert.equal((await call("POST", "/api/auth/logout")).status, 401);
+  // A copy of the old token no longer works, even though it has not expired.
+  assert.equal((await call("GET", "/api/me", { cookie })).status, 401);
+  // Logging out without a session still clears the cookie.
+  assert.equal((await call("POST", "/api/auth/logout")).status, 204);
+  // Signing in again works with a fresh token.
+  const again = await call("POST", "/api/auth/login", {
+    body: { username: USERNAME, password: PASSWORD },
+  });
+  const fresh = await call("GET", "/api/me", { cookie: sessionCookie(again) });
+  assert.equal(fresh.status, 200);
+  assert.equal(fresh.headers.get("cache-control"), "no-store");
 });
 
 test("requireRole allows a listed role and throws 403 otherwise", () => {
