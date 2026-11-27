@@ -12,6 +12,16 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  createTermSchema,
+  getTermById,
+  getTerms,
+  getTermsSummary,
+  patchTerm,
+  postTerm,
+  termsQuerySchema,
+  updateTermSchema,
+} from "../controllers/adminTerms.controller.js";
+import {
   bylawsQuerySchema,
   createBylawSchema,
   getBylawById,
@@ -149,3 +159,23 @@ apiRouter.patch(
   patchBylaw,
 );
 apiRouter.delete("/admin/bylaws/:id", ...admin, removeBylaw);
+apiRouter.get("/admin/terms/summary", ...admin, getTermsSummary);
+apiRouter.get(
+  "/admin/terms",
+  ...admin,
+  validate({ query: termsQuerySchema }),
+  getTerms,
+);
+apiRouter.get("/admin/terms/:id", ...admin, getTermById);
+apiRouter.post(
+  "/admin/terms",
+  ...admin,
+  validate({ body: createTermSchema }),
+  postTerm,
+);
+apiRouter.patch(
+  "/admin/terms/:id",
+  ...admin,
+  validate({ body: updateTermSchema }),
+  patchTerm,
+);

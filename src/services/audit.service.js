@@ -14,6 +14,8 @@ export const AUDIT_ACTIONS = Object.freeze({
   "bylaw.created": "catalog",
   "bylaw.updated": "catalog",
   "bylaw.deleted": "catalog",
+  "term.created": "catalog",
+  "term.updated": "catalog",
   "credit_limit.updated": "catalog",
   "course.updated": "catalog",
   "study_plan.updated": "catalog",

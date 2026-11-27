@@ -1,6 +1,6 @@
 import { query } from "../config/db.js";
 import { AppError } from "../utils/AppError.js";
-import { orderBy } from "../utils/list.js";
+import { sortAndPage } from "../utils/list.js";
 import { transaction } from "../utils/transaction.js";
 import { changes, recordAudit } from "./audit.service.js";
 
@@ -157,7 +157,7 @@ async function passGradeByBylaw() {
 // Every bylaw as a list row (bylaw columns, cohort range, pass grade, caps, counts).
 async function allBylawRows() {
   const [{ rows }, caps, passGrade] = await Promise.all([
-    query(BYLAW_ROWS),
+    query(BYLAW_ROWS + " ORDER BY b.id"),
     creditCapsByBylaw(),
     passGradeByBylaw(),
   ]);
@@ -198,21 +198,11 @@ export async function listBylaws({ q, status, sort, page, page_size }) {
         row.name.toLowerCase().includes(text)) &&
       (!status || row.status === status),
   );
-  // Few rows (one per bylaw), so sorting happens here with the same rule as SQL lists.
-  const ids = (
-    await query(
-      `SELECT id::int AS id FROM bylaw
-        ORDER BY ${orderBy(sort, BYLAW_SORT_COLUMNS, "id")}`,
-    )
-  ).rows.map((r) => r.id);
-  matches.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
-  const start = (page - 1) * page_size;
-  return {
-    items: matches.slice(start, start + page_size),
-    total: matches.length,
-    page,
-    page_size,
-  };
+  return sortAndPage(
+    matches,
+    { sort, page, page_size },
+    Object.keys(BYLAW_SORT_COLUMNS),
+  );
 }
 
 // One bylaw with its programs, tracks and standing bands, or null if the id is unknown.

@@ -30,3 +30,30 @@ export function orderBy(sort, sortColumns, tieBreaker) {
   const column = sortColumns[descending ? sort.slice(1) : sort];
   return `${column} ${descending ? "DESC" : "ASC"} NULLS LAST, ${tieBreaker}`;
 }
+
+// Sorts and pages rows that are already in memory (small tables such as terms or bylaws),
+// with the same rules as the SQL lists: "-" for descending, empty values last.
+export function sortAndPage(rows, { sort, page, page_size }, allowed) {
+  const descending = sort.startsWith("-");
+  const field = descending ? sort.slice(1) : sort;
+  if (!allowed.includes(field)) throw new Error(`Unknown sort field: ${field}`);
+  const sorted = [...rows].sort((a, b) => {
+    const x = a[field];
+    const y = b[field];
+    if (x === y) return 0;
+    if (x === null || x === undefined) return 1;
+    if (y === null || y === undefined) return -1;
+    const order =
+      typeof x === "number" && typeof y === "number"
+        ? x - y
+        : String(x).localeCompare(String(y));
+    return descending ? -order : order;
+  });
+  const start = (page - 1) * page_size;
+  return {
+    items: sorted.slice(start, start + page_size),
+    total: rows.length,
+    page,
+    page_size,
+  };
+}
