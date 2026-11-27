@@ -1,5 +1,7 @@
 import { query } from "../config/db.js";
 import { orderBy } from "../utils/list.js";
+import { transaction } from "../utils/transaction.js";
+import { changes, recordAudit } from "./audit.service.js";
 
 // The coordinator's opening decision per course and term: three yes/no flags
 // (lecture, tutorial, lab). It never stores section counts. Implied sections are read
@@ -53,19 +55,38 @@ export function differingComponents(flags, forecast) {
   });
 }
 
-// Creates or replaces the one decision for this course and term.
+// The decision fields an audit entry compares before and after a save.
+const AUDITED_FIELDS = [
+  "lecture_open",
+  "tutorial_open",
+  "lab_open",
+  "decision_notes",
+  "offering_forecast_id",
+];
+
+// Creates or replaces the one decision for this course and term, and records the save in
+// the audit log in the same transaction: what changed (before and after), the forecast row
+// it was compared with, and who saved it. A save that changes nothing is still recorded.
 // The approver is set only when at least one flag is decided (the table's check needs that).
-export async function saveDecision({
-  termId,
-  courseId,
-  forecastId,
-  flags,
-  notes,
-  approver,
-}) {
+export async function saveDecision(
+  { termId, courseId, forecastId, flags, notes, approver },
+  req,
+) {
   const decided = Object.values(flags).some((flag) => flag !== null);
-  const { rows } = await query(
-    `INSERT INTO offering_decision
+  return transaction(async (client) => {
+    const before =
+      (
+        await client.query(
+          `SELECT lecture_open, tutorial_open, lab_open, decision_notes,
+                  offering_forecast_id::int AS offering_forecast_id
+             FROM offering_decision
+            WHERE academic_term_id = $1 AND course_id = $2
+            FOR UPDATE`,
+          [termId, courseId],
+        )
+      ).rows[0] ?? {};
+    const { rows } = await client.query(
+      `INSERT INTO offering_decision
        (academic_term_id, course_id, offering_forecast_id,
         lecture_open, tutorial_open, lab_open, decision_notes,
         approved_by_user_id, approved_by_name, approved_at)
@@ -81,20 +102,48 @@ export async function saveDecision({
        approved_at          = EXCLUDED.approved_at,
        updated_at           = now()
      RETURNING id`,
-    [
-      termId,
-      courseId,
-      forecastId,
-      flags.lecture_open,
-      flags.tutorial_open,
-      flags.lab_open,
-      notes,
-      decided ? approver.id : null,
-      decided ? approver.name : null,
-      decided,
-    ],
-  );
-  return rows[0].id;
+      [
+        termId,
+        courseId,
+        forecastId,
+        flags.lecture_open,
+        flags.tutorial_open,
+        flags.lab_open,
+        notes,
+        decided ? approver.id : null,
+        decided ? approver.name : null,
+        decided,
+      ],
+    );
+    const decisionId = rows[0].id;
+
+    const { code, term } = (
+      await client.query(
+        `SELECT c.code, t.term_type || ' ' || t.academic_year AS term
+           FROM course c, academic_term t
+          WHERE c.id = $1 AND t.id = $2`,
+        [courseId, termId],
+      )
+    ).rows[0];
+    // pg returns bigint ids as strings; the log keeps them as numbers.
+    const forecastRowId = forecastId === null ? null : Number(forecastId);
+    const after = {
+      ...flags,
+      decision_notes: notes,
+      offering_forecast_id: forecastRowId,
+    };
+    const diff = changes(before, after, AUDITED_FIELDS);
+    const changed = Object.keys(diff);
+    await recordAudit(
+      client,
+      req,
+      "offering_decision.saved",
+      { type: "offering_decision", id: decisionId, label: `${code}, ${term}` },
+      `Saved the opening decision for ${code}, ${term}: ${changed.length ? changed.join(", ") : "no change"}.`,
+      { details: { changes: diff, forecast_id: forecastRowId } },
+    );
+    return decisionId;
+  });
 }
 
 // Columns the decision list can be sorted by (see utils/list.js).
