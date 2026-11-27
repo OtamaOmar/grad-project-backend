@@ -20,8 +20,12 @@ let adminCookie;
 let studentCookie;
 let studentUniversityId;
 
-// Removes the accounts this test created.
+// Removes the accounts, the test bylaw and its audit entries this test created.
 async function cleanUp() {
+  await pool.query("DELETE FROM bylaw WHERE code = 'zz_test_bylaw'");
+  await pool.query(
+    "DELETE FROM audit_event WHERE entity_label = 'zz_test_bylaw'",
+  );
   await pool.query("DELETE FROM app_user WHERE username = ANY($1)", [
     [ADMIN, COORD, STUDENT],
   ]);
@@ -230,4 +234,121 @@ test("data gaps summary counts the register", async () => {
     res.json.by_category.reduce((sum, c) => sum + c.open + c.resolved, 0),
     res.json.total,
   );
+});
+
+test("bylaws: summary, list and detail from the real rows", async () => {
+  const summary = await call("GET", "/api/admin/bylaws/summary", {
+    cookie: adminCookie,
+  });
+  assert.equal(summary.status, 200);
+  assert.equal(summary.json.cross_bylaw_merge_allowed, false);
+  const old = summary.json.by_bylaw.find((b) => b.code === "old_cs");
+  const { rows } = await pool.query(
+    "SELECT count(*)::int AS n FROM course c JOIN bylaw b ON b.id = c.bylaw_id WHERE b.code = 'old_cs'",
+  );
+  assert.equal(old.course_count, rows[0].n);
+
+  const list = await call("GET", "/api/admin/bylaws?q=old", {
+    cookie: adminCookie,
+  });
+  const row = list.json.items.find((b) => b.code === "old_cs");
+  assert.equal(row.status, "active");
+  assert.equal(row.pass_grade.letter, "D"); // the band that starts at 50%
+  // The old bylaw ends the cohort before the next dated bylaw starts (null while undated).
+  const next = summary.json.by_bylaw.length
+    ? (
+        await pool.query(
+          "SELECT min(effective_from_cohort) AS y FROM bylaw WHERE code <> 'old_cs'",
+        )
+      ).rows[0].y
+    : null;
+  assert.equal(row.cohort_to, next === null ? null : next - 1);
+  assert.ok(row.credit_caps.row_count > 0);
+
+  const detail = await call("GET", `/api/admin/bylaws/${row.id}`, {
+    cookie: adminCookie,
+  });
+  assert.ok(detail.json.programs.length >= 1);
+  assert.ok(Array.isArray(detail.json.standing_bands));
+});
+
+test("bylaws: create, edit and delete are real and audited", async () => {
+  const body = {
+    code: "zz_test_bylaw",
+    name: "Test bylaw",
+    graduation_credits: 130,
+    pass_percentage: "55",
+    effective_from_cohort: 2031,
+    source_reference: "Test fixture",
+  };
+  const created = await call("POST", "/api/admin/bylaws", {
+    cookie: adminCookie,
+    body,
+  });
+  assert.equal(created.status, 201);
+  assert.equal(created.json.status, "draft");
+  assert.equal(created.json.pass_percentage, "55.00");
+  const id = created.json.id;
+
+  const duplicate = await call("POST", "/api/admin/bylaws", {
+    cookie: adminCookie,
+    body,
+  });
+  assert.equal(duplicate.status, 409);
+  assert.equal(duplicate.json.error.code, "BYLAW_CODE_TAKEN");
+
+  const renamed = await call("PATCH", `/api/admin/bylaws/${id}`, {
+    cookie: adminCookie,
+    body: { name: "Renamed test bylaw", status: "retired" },
+  });
+  assert.equal(renamed.status, 200);
+  assert.equal(renamed.json.name, "Renamed test bylaw");
+  const codeChange = await call("PATCH", `/api/admin/bylaws/${id}`, {
+    cookie: adminCookie,
+    body: { code: "zz_other" },
+  });
+  assert.equal(codeChange.status, 400);
+  const bad = await call("PATCH", `/api/admin/bylaws/${id}`, {
+    cookie: adminCookie,
+    body: { pass_percentage: 140 },
+  });
+  assert.equal(bad.status, 400);
+
+  // The edit is in the audit log with who made it and what changed.
+  const { rows: audit } = await pool.query(
+    "SELECT action, actor_username, details FROM audit_event WHERE entity_label = 'zz_test_bylaw' ORDER BY id",
+  );
+  assert.deepEqual(
+    audit.map((a) => a.action),
+    ["bylaw.created", "bylaw.updated"],
+  );
+  assert.equal(audit[1].actor_username, ADMIN);
+  assert.deepEqual(audit[1].details.name, {
+    from: "Test bylaw",
+    to: "Renamed test bylaw",
+  });
+
+  const inUse = await call(
+    "DELETE",
+    `/api/admin/bylaws/${(await pool.query("SELECT id FROM bylaw WHERE code = 'old_cs'")).rows[0].id}`,
+    { cookie: adminCookie },
+  );
+  assert.equal(inUse.status, 409);
+  assert.equal(inUse.json.error.code, "BYLAW_IN_USE");
+  assert.ok(inUse.json.error.details.related.course_count > 0);
+
+  const removed = await call("DELETE", `/api/admin/bylaws/${id}`, {
+    cookie: adminCookie,
+  });
+  assert.equal(removed.status, 204);
+  assert.equal(
+    (await call("GET", `/api/admin/bylaws/${id}`, { cookie: adminCookie }))
+      .status,
+    404,
+  );
+  const asStudent = await call("POST", "/api/admin/bylaws", {
+    cookie: studentCookie,
+    body,
+  });
+  assert.equal(asStudent.status, 403);
 });
