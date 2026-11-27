@@ -12,6 +12,17 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  anyListQuerySchema,
+  getEmptyList,
+  getImportsSummary,
+  getNothing,
+  getRegistrationById,
+  getRegistrations,
+  getUniversityDataSummary,
+  postNotAvailable,
+  registrationsQuerySchema,
+} from "../controllers/adminUniversityData.controller.js";
+import {
   auditExportSchema,
   auditQuerySchema,
   auditSummarySchema,
@@ -441,3 +452,40 @@ apiRouter.get(
   getAuditEvents,
 );
 apiRouter.get("/admin/audit/:id", ...admin, getAuditEvent);
+
+// University data: registrations are real; snapshots, faculty and imports have no data.
+apiRouter.get(
+  "/admin/university-data/summary",
+  ...admin,
+  getUniversityDataSummary,
+);
+apiRouter.get(
+  "/admin/university-data/registrations",
+  ...admin,
+  validate({ query: registrationsQuerySchema }),
+  getRegistrations,
+);
+apiRouter.get(
+  "/admin/university-data/registrations/:id",
+  ...admin,
+  getRegistrationById,
+);
+for (const path of [
+  "/admin/university-data/snapshots",
+  "/admin/university-data/faculty",
+  "/admin/imports",
+]) {
+  apiRouter.get(
+    path,
+    ...admin,
+    validate({ query: anyListQuerySchema }),
+    getEmptyList,
+  );
+}
+apiRouter.get("/admin/university-data/faculty/:id", ...admin, getNothing);
+apiRouter.get("/admin/imports/summary", ...admin, getImportsSummary);
+apiRouter.get("/admin/imports/:id", ...admin, getNothing);
+apiRouter.get("/admin/imports/:id/issues", ...admin, getNothing);
+apiRouter.patch("/admin/imports/:id/issues/:issueId", ...admin, getNothing);
+apiRouter.post("/admin/university-data/snapshots", ...admin, postNotAvailable);
+apiRouter.post("/admin/imports", ...admin, postNotAvailable);
