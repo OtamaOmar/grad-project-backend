@@ -143,6 +143,7 @@ import {
   putDecision,
 } from "../controllers/offeringDecision.controller.js";
 import { academicData } from "../controllers/student.controller.js";
+import { getCoordinatorDataGaps } from "../controllers/dataGap.controller.js";
 import { authenticate, requireRole } from "../middleware/auth.js";
 import { authRateLimit } from "../middleware/rateLimit.js";
 import { validate } from "../middleware/validate.js";
@@ -211,6 +212,13 @@ apiRouter.get(
   requireRole("coordinator"),
   validate({ query: listQuerySchema }),
   getDecisions,
+);
+apiRouter.get(
+  "/data-gaps",
+  authenticate,
+  requireRole("coordinator"),
+  validate({ query: dataGapsQuerySchema }),
+  getCoordinatorDataGaps,
 );
 
 // Admin only
