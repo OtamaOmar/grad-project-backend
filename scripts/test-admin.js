@@ -34,7 +34,16 @@ async function cleanUp() {
     "DELETE FROM credit_limit WHERE bylaw_id IN (SELECT id FROM bylaw WHERE code = 'zz_cl_bylaw')",
   );
   await pool.query(
-    "DELETE FROM bylaw WHERE code IN ('zz_test_bylaw', 'zz_cl_bylaw', 'zz_course_bylaw')",
+    "DELETE FROM track WHERE program_id IN (SELECT p.id FROM program p JOIN bylaw b ON b.id = p.bylaw_id WHERE b.code = 'zz_prog_bylaw')",
+  );
+  await pool.query(
+    "DELETE FROM program WHERE bylaw_id IN (SELECT id FROM bylaw WHERE code = 'zz_prog_bylaw')",
+  );
+  await pool.query(
+    "DELETE FROM audit_event WHERE entity_type IN ('program', 'track') AND entity_label ILIKE 'zz%'",
+  );
+  await pool.query(
+    "DELETE FROM bylaw WHERE code IN ('zz_test_bylaw', 'zz_cl_bylaw', 'zz_course_bylaw', 'zz_prog_bylaw')",
   );
   await pool.query("DELETE FROM data_gap WHERE category = 'zz_test_gap'");
   await pool.query(
@@ -976,5 +985,80 @@ test("grade scales: real letters, band roles and a replace that is checked and a
   await pool.query(
     "DELETE FROM audit_event WHERE entity_type = 'grade_scale' AND actor_username = $1",
     [ADMIN],
+  );
+});
+
+test("programs and tracks: real catalog, create and edit, audited", async () => {
+  const summary = await call("GET", "/api/admin/programs/summary", {
+    cookie: adminCookie,
+  });
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM track");
+  assert.equal(summary.json.tracks.total, rows[0].n);
+  assert.ok(summary.json.charters.every((c) => c.credit_breakdown === null));
+
+  const bylawId = (
+    await pool.query(
+      `INSERT INTO bylaw (code, name, graduation_credits, pass_percentage, source_reference)
+       VALUES ('zz_prog_bylaw', 'Program test bylaw', 130, 50, 'Test fixture')
+       RETURNING id::int AS id`,
+    )
+  ).rows[0].id;
+  const program = await call("POST", "/api/admin/programs", {
+    cookie: adminCookie,
+    body: {
+      bylaw_id: bylawId,
+      code: "zzp",
+      name: "Test program",
+      source_reference: "Test",
+    },
+  });
+  assert.equal(program.status, 201);
+  assert.equal(program.json.code, "ZZP");
+  const dup = await call("POST", "/api/admin/programs", {
+    cookie: adminCookie,
+    body: {
+      bylaw_id: bylawId,
+      code: "ZZP",
+      name: "Again",
+      source_reference: "Test",
+    },
+  });
+  assert.equal(dup.json.error.code, "PROGRAM_CODE_TAKEN");
+
+  const track = await call(
+    "POST",
+    `/api/admin/programs/${program.json.id}/tracks`,
+    {
+      cookie: adminCookie,
+      body: { code: "zz_track", name: "Test track", source_reference: "Test" },
+    },
+  );
+  assert.equal(track.status, 201);
+  assert.equal(track.json.status, "planned");
+  const edited = await call("PATCH", `/api/admin/tracks/${track.json.id}`, {
+    cookie: adminCookie,
+    body: { status: "active", description: "A test track." },
+  });
+  assert.equal(edited.json.status, "active");
+  assert.equal(edited.json.description, "A test track.");
+
+  const renamed = await call(
+    "PATCH",
+    `/api/admin/programs/${program.json.id}`,
+    {
+      cookie: adminCookie,
+      body: { name: "Renamed program" },
+    },
+  );
+  assert.equal(renamed.json.name, "Renamed program");
+  assert.equal(renamed.json.track_count, 1);
+  assert.equal(renamed.json.active_track_count, 1);
+
+  const { rows: audit } = await pool.query(
+    "SELECT action FROM audit_event WHERE entity_type IN ('program', 'track') AND entity_label ILIKE 'zz%' ORDER BY id",
+  );
+  assert.deepEqual(
+    audit.map((a) => a.action),
+    ["program.created", "track.created", "track.updated", "program.updated"],
   );
 });
