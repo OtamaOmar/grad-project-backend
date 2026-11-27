@@ -87,13 +87,10 @@
         "SSCI 103"
       ],
       "knownWithoutRequisite": [
-        "COMM 401",
         "CSCI 101",
         "CSCI 102",
         "CSCI 201",
         "CSCI 221",
-        "CSCI 467",
-        "CSCI 495",
         "ENGL 001",
         "ENGL 100",
         "ENGL 101",
@@ -112,7 +109,7 @@
       ],
       "expectedCounts": {
         "courses": 67,
-        "requisites": 49,
+        "requisites": 53,
         "components": 97,
         "pools": 2,
         "poolMembers": 7
@@ -149,7 +146,10 @@
         ["CSCI 417", 1, "course", "CSCI 304", null, null, null],
         ["CSCI 419", 1, "course", "CSCI 304", null, null, null],
         ["CSCI 463", 1, "course", "CSCI 207", null, null, null],
-        ["CSCI 490", 1, "standing", null, "senior", null, null],
+        ["CSCI 490", 1, "credits", null, null, null, 67],
+        ["COMM 401", 1, "credits", null, null, null, 67],
+        ["CSCI 495", 1, "credits", null, null, null, 100],
+        ["CSCI 496", 1, "credits", null, null, null, 100],
         ["CSCI 496", 1, "course", "CSCI 495", null, null, null],
         ["CSCI 451", 1, "course", "CSCI 304", null, null, null],
         ["CSCI 452", 1, "course", "CSCI 451", null, null, null],
@@ -161,6 +161,7 @@
         ["CSCI 462", 1, "course", "CSCI 417", null, null, null],
         ["CSCI 464", 1, "course", "CSCI 304", null, null, null],
         ["CSCI 465", 1, "course", "CSCI 419", null, null, null],
+        ["CSCI 467", 1, "course", "CSCI 322", null, null, null],
         ["CSCI 471", 1, "course", "CSCI 304", null, null, null],
         ["CSCI 472", 1, "course", "ECEN 101", null, null, null],
         ["CSCI 475", 1, "course", "CSCI 315", null, null, null],

@@ -43,15 +43,15 @@ FROM (VALUES
   ('old_cs', 'MATH 203', 'Differential Equations', 4, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'MATH 301', 'Linear Algebra', 4, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 101', 'Computer & Information Skills', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
-  ('old_cs', 'CSCI 112', 'Intermediate Programming', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H8:J8'),
-  ('old_cs', 'CSCI 102', 'Introduction to Programming', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B8:D8'),
-  ('old_cs', 'CSCI 208', 'Analysis Design of Algorithms', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H18:J18'),
-  ('old_cs', 'CSCI 305', 'Database Systems', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H28:J28'),
-  ('old_cs', 'ECEN 101C', 'Electric Circuits', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B16:D16'),
+  ('old_cs', 'CSCI 112', 'Intermediate Programming', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H8:J8; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'CSCI 102', 'Introduction to Programming', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B8:D8; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'CSCI 208', 'Analysis Design of Algorithms', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H18:J18; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'CSCI 305', 'Database Systems', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H28:J28; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'ECEN 101C', 'Electric Circuits', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B16:D16; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
   ('old_cs', 'ENGL 001', 'Intensive English', 0, false, false, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B6:D6'),
   ('old_cs', 'MATH 100', 'Pre-calculus', 0, false, false, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B7:D7'),
-  ('old_cs', 'PHYS 101C', 'Physics I', 4, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H6:J6'),
-  ('old_cs', 'SSCI 105', 'Selected Topics in Social Sciences-Project Managemen', 3, NULL, NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H42:J42'),
+  ('old_cs', 'PHYS 101C', 'Physics I', 4, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H6:J6; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'SSCI 105', 'Selected Topics in Social Sciences-Project Managemen', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H42:J42; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
   ('old_cs', 'CSCI 201', 'Introduction to Programming', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 205', 'Introduction to Computer Systems', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 207', 'Fundamentals of Data Structures & Algorithms', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
@@ -123,5 +123,25 @@ BEGIN
 
   IF bad_code_count > 0 THEN
     RAISE EXCEPTION '% old_cs course codes have leading or trailing spaces', bad_code_count;
+  END IF;
+
+  -- counts_in_gpa is stated for every old course: the 7 sheet-only codes that had none are
+  -- true by team decision; their two other flags stay NULL (not stated by any source)
+  IF EXISTS (
+    SELECT 1 FROM course c JOIN bylaw b ON b.id = c.bylaw_id
+    WHERE b.code = 'old_cs' AND c.counts_in_gpa IS NULL
+  ) THEN
+    RAISE EXCEPTION 'An old_cs course has counts_in_gpa NULL';
+  END IF;
+
+  IF (
+    SELECT count(*) FROM course c JOIN bylaw b ON b.id = c.bylaw_id
+    WHERE b.code = 'old_cs'
+      AND c.code IN ('CSCI 102', 'CSCI 112', 'CSCI 208', 'CSCI 305', 'ECEN 101C', 'PHYS 101C', 'SSCI 105')
+      AND c.counts_in_gpa
+      AND c.counts_toward_degree IS NULL
+      AND c.counts_toward_registration_cap IS NULL
+  ) <> 7 THEN
+    RAISE EXCEPTION 'Expected the 7 sheet-only old_cs courses with counts_in_gpa true and the two other flags NULL';
   END IF;
 END $$;

@@ -36,7 +36,9 @@ test("baseline passes in a read-only transaction and reports known omissions", a
   try {
     const result = await auditReferenceData(client);
     assert.deepEqual(result.errors, []);
-    assert.ok(result.warnings.some((s) => s.includes("CSCI 495")));
+    assert.ok(result.warnings.some((s) => s.includes("CSCI 221")));
+    // CSCI 495 has a stored rule now (100 passed credits, team decision 2026-11-27).
+    assert.ok(!result.warnings.some((s) => s.includes("CSCI 495")));
     assert.ok(!result.warnings.some((s) => s.includes("CSC 493")));
     assert.ok(result.warnings.some((s) => s.includes("AIS 331")));
   } finally {

@@ -23,6 +23,40 @@ ON CONFLICT (code) DO UPDATE SET
   updated_at = now();
 
 -- credit_limit
+-- old_cs summer: the graduating row (9) must come before the default row (7), because the
+-- first matching row in priority order wins. On a database seeded before this row existed,
+-- the summer default row sits at priority 4: move it to 5 first, so it keeps its id (and any
+-- forecast_line that matched it keeps its meaning) and priority 4 is free for the new row.
+UPDATE credit_limit cl SET
+  priority = 5,
+  updated_at = now()
+FROM bylaw b
+WHERE b.id = cl.bylaw_id
+  AND b.code = 'old_cs'
+  AND cl.priority = 4
+  AND cl.term_type = 'summer'
+  AND cl.population = 'default'
+  AND NOT EXISTS (
+    SELECT 1 FROM credit_limit x WHERE x.bylaw_id = b.id AND x.priority = 5
+  );
+
+-- If the move above could not run (priority 5 already holds another rule), stop: the upsert
+-- below would otherwise rewrite the summer default row into the graduating row in place.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM credit_limit cl
+    JOIN bylaw b ON b.id = cl.bylaw_id
+    WHERE b.code = 'old_cs'
+      AND cl.priority = 4
+      AND cl.term_type = 'summer'
+      AND cl.population = 'default'
+  ) THEN
+    RAISE EXCEPTION 'old_cs credit_limit priority 4 is still the summer default row and priority 5 is taken; reorder the old_cs rules before seeding';
+  END IF;
+END $$;
+
 INSERT INTO credit_limit (
   bylaw_id,
   priority,
@@ -52,13 +86,14 @@ FROM (VALUES
   ('old_cs', 1, 'fall_spring', 'default', NULL::numeric, 2.00, false, false, 13, NULL::integer, 'CS Old Bylaws.pdf, Art. 16, p.11'),
   ('old_cs', 2, 'fall_spring', 'past_first_year', 3.00, NULL, false, false, 21, NULL, 'CS Old Bylaws.pdf, Art. 16, p.11'),
   ('old_cs', 3, 'fall_spring', 'default', NULL, NULL, false, false, 19, NULL, 'CS Old Bylaws.pdf, Art. 16, p.11'),
-  ('old_cs', 4, 'summer', 'default', NULL, NULL, false, false, 7, NULL, 'CS Old Bylaws.pdf, Art. 16, p.11'),
+  ('old_cs', 4, 'summer', 'graduating', NULL, NULL, false, false, 9, NULL, 'team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 5, 'summer', 'default', NULL, NULL, false, false, 7, NULL, 'CS Old Bylaws.pdf, Art. 16, p.11'),
   ('bylaw_2025', 1, 'fall_spring', 'first_semester', NULL, NULL, false, false, 18, NULL, 'CS New Bylaws - 25.pdf, Art. 10, p.9'),
   ('bylaw_2025', 2, 'fall_spring', 'default', NULL, 2.00, false, false, 12, NULL, 'CS New Bylaws - 25.pdf, Art. 10, p.9 (order vs the graduating row: see data_gap credit_cap_low_gpa_vs_graduating)'),
   ('bylaw_2025', 3, 'fall_spring', 'default', 3.30, NULL, true, false, 21, NULL, 'CS New Bylaws - 25.pdf, Art. 10, p.9'),
   ('bylaw_2025', 4, 'fall_spring', 'graduating', NULL, NULL, false, false, 21, NULL, 'CS New Bylaws - 25.pdf, Art. 10, p.9 (order vs the low-GPA row: see data_gap credit_cap_low_gpa_vs_graduating)'),
   ('bylaw_2025', 5, 'fall_spring', 'default', 2.00, 3.00, true, false, 18, NULL, 'CS New Bylaws - 25.pdf, Art. 10, p.9'),
-  ('bylaw_2025', 6, 'fall_spring', 'default', 3.00, 3.30, true, false, NULL, NULL, 'CS New Bylaws - 25.pdf, Art. 10, p.9 (this band is not stated: see data_gap credit_cap_cgpa_3_0_to_3_3)'),
+  ('bylaw_2025', 6, 'fall_spring', 'default', 3.00, 3.30, true, false, 21, NULL, 'team decision (BRIEF.md §6, 2026-11-27)'),
   ('bylaw_2025', 7, 'fall_spring', 'default', NULL, NULL, false, false, NULL, 9, 'CS New Bylaws - 25.pdf, Art. 10, p.9'),
   ('bylaw_2025', 8, 'fall_spring', 'credits_remaining_below_minimum', NULL, NULL, false, false, NULL, NULL, 'CS New Bylaws - 25.pdf, Art. 10, p.9'),
   ('bylaw_2025', 9, 'summer', 'graduating', NULL, NULL, false, false, 9, NULL, 'CS New Bylaws - 25.pdf, Art. 10, p.9'),
@@ -170,7 +205,10 @@ FROM (VALUES
   ('bylaw_2025', 'sophomore', 27, 62, 'CS New Bylaws - 25.pdf, Art. 20, p.14'),
   ('bylaw_2025', 'junior', 62, 96, 'CS New Bylaws - 25.pdf, Art. 20, p.14'),
   ('bylaw_2025', 'senior', 96, NULL, 'CS New Bylaws - 25.pdf, Art. 20, p.14'),
-  ('old_cs', 'senior', NULL, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, E40 "Senior Standing"; CS Old Bylaws.pdf, course tables, p.21 (CSCI 490 "Senior Standing"); no number (see data_gap old_senior_threshold)')
+  ('old_cs', 'freshman', 0, 36, 'CS Old Bylaws.pdf, Art. 24, pp.14-15; team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'sophomore', 36, 71, 'CS Old Bylaws.pdf, Art. 24, pp.14-15; team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'junior', 71, 106, 'CS Old Bylaws.pdf, Art. 24, pp.14-15; team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'senior', 106, NULL, 'CS Old Bylaws.pdf, Art. 24, pp.14-15; team decision (BRIEF.md §6, 2026-11-27)')
 ) AS v (bylaw_code, level, min_credits_passed, max_credits_passed, source_reference)
 JOIN bylaw b ON b.code = v.bylaw_code
 ON CONFLICT (bylaw_id, level) DO UPDATE SET
@@ -199,3 +237,70 @@ ON CONFLICT (bylaw_id, code) DO UPDATE SET
   name = EXCLUDED.name,
   source_reference = EXCLUDED.source_reference,
   updated_at = now();
+
+-- check: old_cs has 5 credit_limit rows with summer graduating 9 (priority 4) before summer
+-- default 7 (priority 5); bylaw_2025 has 10 rows with 21 on the CGPA 3.00-3.30 band (priority 6);
+-- old_cs has the 4 standing bands 0-36, 36-71, 71-106, 106+ (upper bound exclusive)
+DO $$
+DECLARE
+  old_limit_count integer;
+  new_limit_count integer;
+  old_band_count integer;
+BEGIN
+  SELECT count(*) INTO old_limit_count
+  FROM credit_limit cl JOIN bylaw b ON b.id = cl.bylaw_id
+  WHERE b.code = 'old_cs';
+
+  SELECT count(*) INTO new_limit_count
+  FROM credit_limit cl JOIN bylaw b ON b.id = cl.bylaw_id
+  WHERE b.code = 'bylaw_2025';
+
+  IF old_limit_count <> 5 OR new_limit_count <> 10 THEN
+    RAISE EXCEPTION 'Expected 5 old_cs and 10 bylaw_2025 credit_limit rows, found % and %',
+      old_limit_count, new_limit_count;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM credit_limit cl JOIN bylaw b ON b.id = cl.bylaw_id
+    WHERE b.code = 'old_cs' AND cl.priority = 4 AND cl.term_type = 'summer'
+      AND cl.population = 'graduating' AND cl.max_credits = 9
+  ) OR NOT EXISTS (
+    SELECT 1 FROM credit_limit cl JOIN bylaw b ON b.id = cl.bylaw_id
+    WHERE b.code = 'old_cs' AND cl.priority = 5 AND cl.term_type = 'summer'
+      AND cl.population = 'default' AND cl.max_credits = 7
+  ) THEN
+    RAISE EXCEPTION 'Expected old_cs summer graduating 9 at priority 4 and summer default 7 at priority 5';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM credit_limit cl JOIN bylaw b ON b.id = cl.bylaw_id
+    WHERE b.code = 'bylaw_2025' AND cl.priority = 6 AND cl.term_type = 'fall_spring'
+      AND cl.population = 'default' AND cl.min_cgpa = 3.00 AND cl.min_cgpa_inclusive
+      AND cl.max_cgpa = 3.30 AND NOT cl.max_cgpa_inclusive AND cl.max_credits = 21
+  ) THEN
+    RAISE EXCEPTION 'Expected bylaw_2025 priority 6 (CGPA 3.00 inclusive to 3.30 exclusive) to allow 21 credits';
+  END IF;
+
+  SELECT count(*) INTO old_band_count
+  FROM standing_band sb JOIN bylaw b ON b.id = sb.bylaw_id
+  WHERE b.code = 'old_cs';
+
+  IF old_band_count <> 4 OR EXISTS (
+    SELECT 1
+    FROM (VALUES
+      ('freshman', 0, 36),
+      ('sophomore', 36, 71),
+      ('junior', 71, 106),
+      ('senior', 106, NULL::integer)
+    ) AS e (level, min_credits_passed, max_credits_passed)
+    WHERE NOT EXISTS (
+      SELECT 1 FROM standing_band sb JOIN bylaw b ON b.id = sb.bylaw_id
+      WHERE b.code = 'old_cs'
+        AND sb.level = e.level
+        AND sb.min_credits_passed = e.min_credits_passed
+        AND sb.max_credits_passed IS NOT DISTINCT FROM e.max_credits_passed
+    )
+  ) THEN
+    RAISE EXCEPTION 'Expected exactly the 4 old_cs standing bands 0-36, 36-71, 71-106 and 106+ (found % rows)', old_band_count;
+  END IF;
+END $$;
