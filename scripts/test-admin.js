@@ -914,3 +914,67 @@ test("courses: create, edit, prerequisites, audited", async () => {
     ],
   );
 });
+
+test("grade scales: real letters, band roles and a replace that is checked and audited", async () => {
+  const summary = await call("GET", "/api/admin/grade-scales/summary", {
+    cookie: adminCookie,
+  });
+  assert.equal(summary.status, 200);
+  assert.ok(summary.json.scale_count >= 1);
+  assert.equal(summary.json.unverified_count, summary.json.scale_count);
+
+  const list = await call("GET", "/api/admin/grade-scales?bylaw_code=old_cs", {
+    cookie: adminCookie,
+  });
+  const scale = list.json.items[0];
+  assert.equal(scale.passing_floor_letter, "D"); // the band that starts at 50%
+  assert.ok(
+    scale.entries[0].min_percentage >= scale.entries.at(-1).min_percentage ?? 0,
+  );
+
+  // Replace on a copy: same letters, then put the originals back.
+  const original = scale.entries.map((e) => ({
+    letter: e.letter,
+    grade_points: Number(e.grade_points),
+    min_percentage: e.min_percentage === null ? null : Number(e.min_percentage),
+    max_percentage: e.max_percentage === null ? null : Number(e.max_percentage),
+    min_inclusive: e.min_inclusive,
+    max_inclusive: e.max_inclusive,
+    source_reference: e.source_reference,
+  }));
+  const put = (entries, verified = false) =>
+    call("PUT", `/api/admin/grade-scales/${scale.id}/entries`, {
+      cookie: adminCookie,
+      body: { entries, verified_against_pdf: verified },
+    });
+  const overlapping = original.map((e) =>
+    e.letter === "D" ? { ...e, min_percentage: 40 } : e,
+  );
+  const clash = await put(overlapping);
+  assert.equal(clash.status, 400);
+  assert.equal(clash.json.error.details[0].code, "bands_overlap");
+  assert.equal((await put([...original, original[0]])).status, 400);
+
+  const same = await put(original, true);
+  assert.equal(same.status, 200);
+  assert.equal(same.json.verified_against_pdf, true);
+  assert.equal(same.json.letter_count, original.length);
+  const restored = await call("PATCH", `/api/admin/grade-scales/${scale.id}`, {
+    cookie: adminCookie,
+    body: { verified_against_pdf: false },
+  });
+  assert.equal(restored.json.verified_against_pdf, false);
+
+  const { rows: audit } = await pool.query(
+    "SELECT action FROM audit_event WHERE entity_type = 'grade_scale' AND entity_id = $1 ORDER BY id DESC LIMIT 2",
+    [String(scale.id)],
+  );
+  assert.deepEqual(
+    audit.map((a) => a.action),
+    ["grade_scale.updated", "grade_scale.entries_replaced"],
+  );
+  await pool.query(
+    "DELETE FROM audit_event WHERE entity_type = 'grade_scale' AND actor_username = $1",
+    [ADMIN],
+  );
+});

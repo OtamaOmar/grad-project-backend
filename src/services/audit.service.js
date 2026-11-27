@@ -20,6 +20,8 @@ export const AUDIT_ACTIONS = Object.freeze({
   "credit_limit.updated": "catalog",
   "credit_limit.deleted": "catalog",
   "credit_limit.reordered": "catalog",
+  "grade_scale.updated": "catalog",
+  "grade_scale.entries_replaced": "catalog",
   "course.created": "catalog",
   "course.updated": "catalog",
   "requisite.added": "catalog",
