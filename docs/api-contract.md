@@ -99,6 +99,18 @@ One envelope, defined in [contracts/errors.md](../contracts/errors.md):
 | `POST /api/admin/bylaws` | Admin | Built (`feature/backend-admin-bylaws`) | Body: `code` (2-32 of `a-z 0-9 _`), `name`, `description?`, `graduation_credits`, `training_credits_excluded_from_gpa?`, `pass_percentage` (0-100), `final_exam_min_percentage?`, `status?` (`draft` default, `active`, `retired`), `effective_from_cohort` (1990-2100), `source_reference`. `201` with the detail. `409 BYLAW_CODE_TAKEN`. Audited |
 | `PATCH /api/admin/bylaws/:id` | Admin | Built (`feature/backend-admin-bylaws`) | Any create field. The `code` cannot change (400). Returns the detail. Audited with the before/after of each changed field |
 | `DELETE /api/admin/bylaws/:id` | Admin | Built (`feature/backend-admin-bylaws`) | `204`. `409 BYLAW_IN_USE` with `details.related` while any row refers to the bylaw (retire it instead). Audited |
+| `GET /api/admin/dashboard` | Admin | Built | Users by role, courses by bylaw, open gaps by severity and category, a status row per reference area. `last_import` is null |
+| `GET/POST /api/admin/users`, `PATCH /api/admin/users/:id` | Admin | Built | Staff accounts only. Create returns a one-time `temporary_password` (only its hash is stored). No self-deactivation or own role change (409). Deactivation ends that user's sessions |
+| `GET /api/admin/terms[/summary\|/:id]`, `POST`, `PATCH /:id` | Admin | Built | Calendar fields `status`, `starts_on`, `ends_on`, `registration_locked`. One active term; closed means locked; a used term keeps its year and type (409 `TERM_IN_USE`) |
+| `POST/PATCH/DELETE /api/admin/credit-limits[/:id]`, `POST /reorder` | Admin | Built | One priority per bylaw (409 `PRIORITY_TAKEN`); reorder lists every rule once; a rule a stored forecast used cannot be removed |
+| `POST /api/admin/data-gaps`, `PATCH /:id` | Admin | Built | `severity` and `bylaw_scope` are admin-set; resolving needs notes |
+| `GET /api/admin/courses[/summary\|/requisites\|/:id]`, `POST`, `PATCH /:id`, `POST/DELETE /:id/requisites[/:requisiteId]` | Admin | Built | Components replaced as a list; codes upper case and unique per bylaw; a course never changes bylaw; a rule must point inside the course's bylaw. `department` is null, the catalog freeze is not enforced |
+| `GET /api/admin/grade-scales[/summary\|/:id]`, `PATCH /:id`, `PUT /:id/entries` | Admin | Built | Replacing letters checks points 0-4, bands 0-100, no duplicates, no overlaps. Audited as a warning (grade points feed the CGPA) |
+| `GET /api/admin/programs[/summary\|/:id]`, `POST`, `PATCH /:id`, `POST /:id/tracks`, `GET /api/admin/tracks`, `PATCH /api/admin/tracks/:id` | Admin | Built | Track `status` (active/inactive/planned) and `description`. `degree` and the credit split are null |
+| `GET /api/admin/study-plans[/summary\|/:id]`, `POST/PATCH/DELETE /:id/slots[/:slotId]`, `GET /api/admin/elective-pools` | Admin | Built | One course or one pool per slot, from the plan's bylaw; positions unique per term (409 `SLOT_POSITION_TAKEN`). Status comes from the gap register |
+| `GET /api/admin/audit[/summary\|/:id\|/export]` | Admin | Built | The audit log, filters, related events, CSV export (formula-safe, itself logged) |
+| `GET /api/admin/university-data/summary`, `/registrations[/:id]` | Admin | Built | Registrations are the real enrollments with a data check (`unresolved_result`, `label_mismatch`) |
+| `GET /api/admin/university-data/snapshots`, `/faculty`, `GET /api/admin/imports[/summary]` | Admin | Built | No tables or data: empty lists, zero counts. `POST` snapshots and imports answer `501 NOT_AVAILABLE` (imports run with `npm run db:import`) |
 | `POST /api/forecast-runs` | Coordinator | Planned, Ayman | Starts one baseline run. Body in [forecast-io.md](forecast-io.md) |
 | `GET /api/forecast-runs?termId=` | Coordinator | Planned, Ayman | Runs for one target term |
 | `GET /api/forecast-runs/:runId/courses` | Coordinator | Planned, Ayman | Dashboard rows for one run |
@@ -192,7 +204,7 @@ Response (same shape as a list item):
 
 ### Admin changes are audited
 
-Every admin write is saved in the same transaction as an `audit_event` row: who (user id, username, name and role copied in), what (`action` such as `bylaw.updated`, `category`), which record (`entity_type`, `entity_id`, `entity_label`), the before/after of each changed field (`details`), the masked IP (`10.20.x.x`) and a request id. Nothing is written without its audit entry.
+Every admin write is saved in the same transaction as an `audit_event` row. Sign-ins, failed sign-ins (with the username typed, as warnings) and sign-outs are logged too. Each entry has: who (user id, username, name and role copied in), what (`action` such as `bylaw.updated`, `category`), which record (`entity_type`, `entity_id`, `entity_label`), the before/after of each changed field (`details`), the masked IP (`10.20.x.x`) and a request id. Nothing is written without its audit entry.
 
 Re-running `npm run db:seed` overwrites the seeded columns of reference tables (for example a bylaw's name or pass percentage) with the seed values. Columns the seeds do not write (`bylaw.status`, `bylaw.effective_from_cohort`) keep their admin values.
 
@@ -243,7 +255,6 @@ Python does not compute `p`, headcount, eligibility, sections or approval.
 - Stored explanation rows.
 - Student dashboard, expected offerings and my-courses routes: the frontend mocks propose them, but they need the forecast engine. They are added here when that work starts.
 - Decision history: needs a table that keeps every save.
-- Admin routes not listed above. They are added page by page.
 - SSO, password-reset email, refresh tokens.
 - API versioning, GraphQL, WebSockets, a message queue, Redis.
 - Registration write-back, timetable, room scheduling, petitions, internship workflow.

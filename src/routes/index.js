@@ -125,6 +125,7 @@ import {
   getDataGapById,
   getDataGaps,
   getDataGapsSummary,
+  getDashboard,
   createUserSchema,
   getUsers,
   getUsersSummary,
@@ -489,3 +490,4 @@ apiRouter.get("/admin/imports/:id/issues", ...admin, getNothing);
 apiRouter.patch("/admin/imports/:id/issues/:issueId", ...admin, getNothing);
 apiRouter.post("/admin/university-data/snapshots", ...admin, postNotAvailable);
 apiRouter.post("/admin/imports", ...admin, postNotAvailable);
+apiRouter.get("/admin/dashboard", ...admin, getDashboard);

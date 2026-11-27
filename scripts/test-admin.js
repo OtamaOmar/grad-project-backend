@@ -1292,3 +1292,37 @@ test("university data and imports: real registrations, honest empty lists", asyn
     0,
   );
 });
+
+test("dashboard: the summary across every admin area matches the tables", async () => {
+  const res = await call("GET", "/api/admin/dashboard", {
+    cookie: adminCookie,
+  });
+  assert.equal(res.status, 200);
+  const { rows } = await pool.query(
+    "SELECT (SELECT count(*)::int FROM course) AS courses, (SELECT count(*)::int FROM data_gap WHERE status = 'open') AS gaps",
+  );
+  assert.equal(res.json.courses.total, rows[0].courses);
+  assert.equal(res.json.open_gaps.total, rows[0].gaps);
+  assert.equal(
+    res.json.open_gaps_by_category.reduce((sum, c) => sum + c.open_count, 0),
+    rows[0].gaps,
+  );
+  assert.deepEqual(
+    res.json.reference_status.map((d) => d.domain),
+    [
+      "bylaws",
+      "grade_scales",
+      "credit_limits",
+      "courses",
+      "study_plans",
+      "terms",
+    ],
+  );
+  const limits = res.json.reference_status.find(
+    (d) => d.domain === "credit_limits",
+  );
+  assert.ok(limits.open_gap_count >= 1); // the credit_limit gaps of the seeded register
+  assert.equal(limits.validation_state, "open_gaps");
+  assert.equal(res.json.last_import, null);
+  assert.ok(res.json.users.by_role.admin >= 1);
+});
