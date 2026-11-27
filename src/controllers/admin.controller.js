@@ -1,8 +1,12 @@
 import { z } from "zod";
 import {
+  createCreditLimit,
   creditLimitsSummary,
   LIMIT_SORT_COLUMNS,
   listCreditLimits,
+  removeCreditLimit,
+  reorderCreditLimits,
+  updateCreditLimit,
 } from "../services/adminCreditLimits.service.js";
 import {
   dataGapsSummary,
@@ -130,4 +134,99 @@ export async function postUser(req, res) {
 export async function patchUser(req, res) {
   const id = z.coerce.number().int().positive().parse(req.params.id);
   res.json(await updateUser(req, id, req.body));
+}
+
+const blankToNull = (value) => (value === "" ? null : value);
+const cgpa = z
+  .preprocess(blankToNull, z.coerce.number().min(0).max(4).nullable())
+  .optional();
+const credits = z
+  .preprocess(blankToNull, z.coerce.number().int().min(0).nullable())
+  .optional();
+
+// The fields of a credit-limit rule. CGPA 0-4, credits 0 or more, priority from 1.
+const limitShape = {
+  bylaw_id: z.coerce.number().int().positive(),
+  priority: z.coerce.number().int().min(1),
+  term_type: z.enum(["fall_spring", "summer"]),
+  population: z.enum([
+    "default",
+    "past_first_year",
+    "first_semester",
+    "graduating",
+    "credits_remaining_below_minimum",
+  ]),
+  min_cgpa: cgpa,
+  max_cgpa: cgpa,
+  min_cgpa_inclusive: z.boolean().optional(),
+  max_cgpa_inclusive: z.boolean().optional(),
+  max_credits: credits,
+  min_credits: credits,
+  source_reference: z.string().trim().min(1).max(2000),
+};
+
+// The minimum may not be above the maximum (the database checks the CGPA order).
+const minNotAboveMax = (body) =>
+  body.min_credits === null ||
+  body.min_credits === undefined ||
+  body.max_credits === null ||
+  body.max_credits === undefined ||
+  body.min_credits <= body.max_credits;
+const minAboveMaxIssue = {
+  path: ["min_credits"],
+  message: "The minimum cannot be above the maximum.",
+};
+
+// POST /api/admin/credit-limits.
+export const createCreditLimitSchema = z
+  .strictObject({
+    ...limitShape,
+    // An unsent bound is exclusive, as in the database.
+    min_cgpa_inclusive: z.boolean().default(false),
+    max_cgpa_inclusive: z.boolean().default(false),
+  })
+  .refine(minNotAboveMax, minAboveMaxIssue);
+
+// PATCH /api/admin/credit-limits/:id: any of the same fields.
+export const updateCreditLimitSchema = z
+  .strictObject(
+    Object.fromEntries(
+      Object.entries(limitShape).map(([key, schema]) => [
+        key,
+        schema.optional(),
+      ]),
+    ),
+  )
+  .refine(minNotAboveMax, minAboveMaxIssue);
+
+// POST /api/admin/credit-limits/reorder.
+export const reorderCreditLimitsSchema = z.strictObject({
+  bylaw_id: z.coerce.number().int().positive(),
+  ordered_ids: z.array(z.coerce.number().int().positive()).min(1),
+});
+
+const limitId = (req) =>
+  z.coerce.number().int().positive().parse(req.params.id);
+
+// POST /api/admin/credit-limits: creates a rule. 201 with the row.
+export async function postCreditLimit(req, res) {
+  res.status(201).json(await createCreditLimit(req, req.body));
+}
+
+// PATCH /api/admin/credit-limits/:id: changes the fields sent.
+export async function patchCreditLimit(req, res) {
+  res.json(await updateCreditLimit(req, limitId(req), req.body));
+}
+
+// DELETE /api/admin/credit-limits/:id: removes a rule. 204.
+export async function deleteCreditLimit(req, res) {
+  await removeCreditLimit(req, limitId(req));
+  res.status(204).end();
+}
+
+// POST /api/admin/credit-limits/reorder: new priority order for one bylaw's rules.
+export async function postCreditLimitOrder(req, res) {
+  res.json(
+    await reorderCreditLimits(req, req.body.bylaw_id, req.body.ordered_ids),
+  );
 }
