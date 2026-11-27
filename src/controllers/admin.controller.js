@@ -11,7 +11,9 @@ import {
   listDataGaps,
 } from "../services/adminDataGaps.service.js";
 import {
+  createStaffUser,
   listUsers,
+  updateUser,
   USER_SORT_COLUMNS,
   usersSummary,
 } from "../services/adminUsers.service.js";
@@ -89,4 +91,43 @@ export async function getDataGapById(req, res) {
   const gap = await getDataGap(id);
   if (!gap) throw new AppError(404, "NOT_FOUND", "No data gap with this id.");
   res.json(gap);
+}
+
+const fullName = z.string().trim().min(1).max(200);
+const staffCode = z.string().trim().max(32).optional();
+const staffRole = z.enum(["coordinator", "advisor", "admin"]);
+
+// POST /api/admin/users: a staff account. Students sign up with their university ID.
+export const createUserSchema = z.strictObject({
+  full_name: fullName,
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(
+      /^[a-z0-9._-]{3,64}$/,
+      "3 to 64 characters: letters, digits, dot, dash or underscore",
+    ),
+  role: staffRole,
+  staff_code: staffCode,
+});
+
+// PATCH /api/admin/users/:id: name, staff code, role or active flag.
+export const updateUserSchema = z.strictObject({
+  full_name: fullName.optional(),
+  staff_code: staffCode,
+  role: z.enum(["student", "coordinator", "advisor", "admin"]).optional(),
+  is_active: z.boolean().optional(),
+});
+
+// POST /api/admin/users: creates the account. 201 with the row and a one-time
+// temporary_password the admin hands to the new user.
+export async function postUser(req, res) {
+  res.status(201).json(await createStaffUser(req, req.body));
+}
+
+// PATCH /api/admin/users/:id: changes the fields sent.
+export async function patchUser(req, res) {
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  res.json(await updateUser(req, id, req.body));
 }
