@@ -12,6 +12,19 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  createSlotSchema,
+  deleteSlot,
+  getElectivePools,
+  getStudyPlanById,
+  getStudyPlans,
+  getStudyPlansSummary,
+  patchSlot,
+  poolsQuerySchema,
+  postSlot,
+  studyPlansQuerySchema,
+  updateSlotSchema,
+} from "../controllers/adminStudyPlans.controller.js";
+import {
   createProgramSchema,
   createTrackSchema,
   getProgramById,
@@ -372,4 +385,31 @@ apiRouter.patch(
   ...admin,
   validate({ body: updateTrackSchema }),
   patchTrack,
+);
+apiRouter.get("/admin/study-plans/summary", ...admin, getStudyPlansSummary);
+apiRouter.get(
+  "/admin/study-plans",
+  ...admin,
+  validate({ query: studyPlansQuerySchema }),
+  getStudyPlans,
+);
+apiRouter.get("/admin/study-plans/:id", ...admin, getStudyPlanById);
+apiRouter.post(
+  "/admin/study-plans/:id/slots",
+  ...admin,
+  validate({ body: createSlotSchema }),
+  postSlot,
+);
+apiRouter.patch(
+  "/admin/study-plans/:id/slots/:slotId",
+  ...admin,
+  validate({ body: updateSlotSchema }),
+  patchSlot,
+);
+apiRouter.delete("/admin/study-plans/:id/slots/:slotId", ...admin, deleteSlot);
+apiRouter.get(
+  "/admin/elective-pools",
+  ...admin,
+  validate({ query: poolsQuerySchema }),
+  getElectivePools,
 );

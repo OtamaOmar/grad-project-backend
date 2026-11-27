@@ -13,7 +13,7 @@ import { changes, recordAudit } from "./audit.service.js";
 // states: an old_/new_ category, or the source it cites (the old bylaw PDF or the old
 // study-plan sheets mean old_cs; the 2025 bylaw PDF means bylaw_2025). A gap that cites
 // neither gets an empty list (unknown).
-const GAP_ROWS = `
+export const GAP_ROWS = `
   SELECT g.id::int AS id,
          'GAP-' || lpad(g.id::text, 3, '0') AS gap_code,
          g.category,
