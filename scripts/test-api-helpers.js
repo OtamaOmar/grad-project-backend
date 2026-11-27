@@ -45,10 +45,12 @@ export async function call(method, path, { body, cookie, raw } = {}) {
     body: raw ?? (body === undefined ? undefined : JSON.stringify(body)),
   });
   const text = await res.text();
+  const isJson = (res.headers.get("content-type") ?? "").includes("json");
   return {
     status: res.status,
     headers: res.headers,
-    json: text ? JSON.parse(text) : null,
+    json: isJson && text ? JSON.parse(text) : null,
+    text,
   };
 }
 

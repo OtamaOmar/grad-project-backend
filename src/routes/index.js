@@ -12,6 +12,15 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  auditExportSchema,
+  auditQuerySchema,
+  auditSummarySchema,
+  getAuditEvent,
+  getAuditEvents,
+  getAuditExport,
+  getAuditSummary,
+} from "../controllers/adminAudit.controller.js";
+import {
   createSlotSchema,
   deleteSlot,
   getElectivePools,
@@ -413,3 +422,22 @@ apiRouter.get(
   validate({ query: poolsQuerySchema }),
   getElectivePools,
 );
+apiRouter.get(
+  "/admin/audit/summary",
+  ...admin,
+  validate({ query: auditSummarySchema }),
+  getAuditSummary,
+);
+apiRouter.get(
+  "/admin/audit/export",
+  ...admin,
+  validate({ query: auditExportSchema }),
+  getAuditExport,
+);
+apiRouter.get(
+  "/admin/audit",
+  ...admin,
+  validate({ query: auditQuerySchema }),
+  getAuditEvents,
+);
+apiRouter.get("/admin/audit/:id", ...admin, getAuditEvent);

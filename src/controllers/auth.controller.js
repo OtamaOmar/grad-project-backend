@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { query } from "../config/db.js";
+import { recordAudit } from "../services/audit.service.js";
 import {
   clearSession,
   issueSession,
@@ -54,6 +56,18 @@ export const onboardingSchema = z.strictObject({
 export async function login(req, res) {
   const { username, password } = req.body;
   const user = await verifyCredentials(username, password);
+  if (!user || !user.is_active) {
+    await recordAudit(
+      { query },
+      req,
+      "auth.login_failed",
+      { type: "app_user", id: user?.id ?? null, label: username },
+      user
+        ? `Sign-in refused: ${username} is deactivated.`
+        : `Failed sign-in for ${username}.`,
+      { severity: "warning", outcome: "failure", usernameAttempted: username },
+    );
+  }
   if (!user) {
     throw new AppError(
       401,
@@ -65,6 +79,14 @@ export async function login(req, res) {
     throw new AppError(403, "ACCOUNT_INACTIVE", "This account is deactivated.");
   }
   issueSession(res, user);
+  await recordAudit(
+    { query },
+    req,
+    "auth.login",
+    { type: "app_user", id: user.id, label: user.username },
+    `${user.username} signed in.`,
+    { actor: user },
+  );
   res.json({ user: toMe(user) });
 }
 
@@ -73,7 +95,25 @@ export async function login(req, res) {
 // session had already expired, so the browser is never left holding a cookie.
 export async function logout(req, res) {
   const session = readSession(req.cookies?.[SESSION_COOKIE]);
-  if (session) await revokeSessions(session.userId);
+  if (session) {
+    await revokeSessions(session.userId);
+    const {
+      rows: [actor],
+    } = await query(
+      "SELECT id, username, full_name, role FROM app_user WHERE id = $1",
+      [session.userId],
+    );
+    if (actor) {
+      await recordAudit(
+        { query },
+        req,
+        "auth.logout",
+        { type: "app_user", id: actor.id, label: actor.username },
+        `${actor.username} signed out.`,
+        { actor },
+      );
+    }
+  }
   clearSession(res);
   res.status(204).end();
 }
