@@ -30,6 +30,7 @@ export function errorHandler(err, req, res, next) {
     const details = err.issues.map((issue) => ({
       path: issue.path.join("."),
       message: issue.message,
+      code: issue.code,
     }));
     return send(
       res,
