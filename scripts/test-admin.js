@@ -24,6 +24,12 @@ let studentUniversityId;
 async function cleanUp() {
   await pool.query("DELETE FROM bylaw WHERE code = 'zz_test_bylaw'");
   await pool.query(
+    "DELETE FROM academic_term WHERE academic_year IN (2098, 2099)",
+  );
+  await pool.query(
+    "DELETE FROM audit_event WHERE entity_type = 'academic_term' AND entity_label LIKE '% 209_'",
+  );
+  await pool.query(
     "DELETE FROM audit_event WHERE entity_label = 'zz_test_bylaw'",
   );
   await pool.query("DELETE FROM app_user WHERE username = ANY($1)", [
@@ -351,4 +357,105 @@ test("bylaws: create, edit and delete are real and audited", async () => {
     body,
   });
   assert.equal(asStudent.status, 403);
+});
+
+test("terms: list newest first, summary, and status read from the data", async () => {
+  const list = await call("GET", "/api/admin/terms", { cookie: adminCookie });
+  assert.equal(list.status, 200);
+  assert.equal(list.json.page_size, 100);
+  const years = list.json.items.map((t) => t.chronological);
+  assert.deepEqual(
+    years,
+    [...years].sort((a, b) => b - a),
+  );
+  const withEnrollments = list.json.items.filter((t) => t.enrollment_count > 0);
+  assert.ok(
+    withEnrollments.every((t) => ["closed", "active"].includes(t.status)),
+  );
+  const fall = list.json.items.find((t) => t.term_type === "fall");
+  assert.equal(fall.academic_year_start, fall.academic_year);
+  assert.equal(
+    fall.academic_year_label,
+    `${fall.academic_year}/${fall.academic_year + 1}`,
+  );
+
+  const summary = await call("GET", "/api/admin/terms/summary", {
+    cookie: adminCookie,
+  });
+  assert.equal(
+    Object.values(summary.json.by_status).reduce((a, b) => a + b, 0),
+    summary.json.total,
+  );
+});
+
+test("terms: create and edit with the calendar rules, audited", async () => {
+  const create = (body) =>
+    call("POST", "/api/admin/terms", { cookie: adminCookie, body });
+  const created = await create({
+    academic_year: 2099,
+    term_type: "fall",
+    starts_on: "2099-09-15",
+    ends_on: "2100-01-10",
+  });
+  assert.equal(created.status, 201);
+  assert.equal(created.json.status, "draft");
+  assert.equal(created.json.duration_weeks, 17);
+  const id = created.json.id;
+
+  assert.equal(
+    (await create({ academic_year: 2099, term_type: "fall" })).json.error.code,
+    "TERM_EXISTS",
+  );
+  const badDates = await create({
+    academic_year: 2098,
+    term_type: "spring",
+    starts_on: "2098-05-01",
+    ends_on: "2098-02-01",
+  });
+  assert.equal(badDates.status, 400);
+  assert.equal(badDates.json.error.details[0].path, "ends_on");
+  const closedOpen = await create({
+    academic_year: 2098,
+    term_type: "summer",
+    status: "closed",
+  });
+  assert.equal(closedOpen.status, 400);
+
+  // Only one active term: make ours active only if none is, then a second one is refused.
+  const { rows } = await pool.query(
+    "SELECT count(*)::int AS n FROM academic_term WHERE status = 'active'",
+  );
+  if (rows[0].n === 0) {
+    const active = await call("PATCH", `/api/admin/terms/${id}`, {
+      cookie: adminCookie,
+      body: { status: "active" },
+    });
+    assert.equal(active.status, 200);
+  }
+  const second = await create({
+    academic_year: 2098,
+    term_type: "fall",
+    status: "active",
+  });
+  assert.equal(second.json.error.code, "ACTIVE_TERM_EXISTS");
+
+  // A term with enrollments keeps its year and type.
+  const used = (
+    await pool.query(
+      "SELECT t.id FROM academic_term t WHERE EXISTS (SELECT 1 FROM enrollment e WHERE e.academic_term_id = t.id) LIMIT 1",
+    )
+  ).rows[0].id;
+  const renamed = await call("PATCH", `/api/admin/terms/${used}`, {
+    cookie: adminCookie,
+    body: { academic_year: 2098 },
+  });
+  assert.equal(renamed.status, 409);
+  assert.equal(renamed.json.error.code, "TERM_IN_USE");
+  assert.ok(renamed.json.error.details.related.enrollment_count > 0);
+
+  const { rows: audit } = await pool.query(
+    "SELECT action FROM audit_event WHERE entity_type = 'academic_term' AND entity_id = $1 ORDER BY id",
+    [String(id)],
+  );
+  assert.equal(audit[0].action, "term.created");
 });
