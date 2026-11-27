@@ -9,6 +9,7 @@ import {
 } from "../services/session.service.js";
 import { findStudentForSignup } from "../services/student.service.js";
 import {
+  changePassword,
   createStudentUser,
   revokeSessions,
   saveOnboarding,
@@ -49,6 +50,52 @@ export const onboardingSchema = z.strictObject({
   preferred_language: z.enum(["en", "ar"]).optional(),
   preferred_theme: z.enum(["light", "dark"]).optional(),
 });
+
+// A password change: the current password, and a new one of 8-128 characters that differs.
+export const changePasswordSchema = z
+  .strictObject({
+    current_password: z.string().min(1).max(128),
+    new_password: z.string().min(8).max(128),
+  })
+  .refine((body) => body.new_password !== body.current_password, {
+    path: ["new_password"],
+    message: "The new password must differ from the current one.",
+  });
+
+// PATCH /api/me/password: changes the signed-in user's password. A wrong current password
+// is a 400 on that field (not 401, which would read as "signed out"). Every other session
+// of the user ends; this browser gets a fresh cookie so the user stays signed in. Audited.
+export async function updatePassword(req, res) {
+  const { current_password, new_password } = req.body;
+  const user = await changePassword(
+    req.user.id,
+    current_password,
+    new_password,
+  );
+  if (!user) {
+    throw new AppError(
+      400,
+      "VALIDATION_FAILED",
+      "The current password is not right.",
+      [
+        {
+          path: "current_password",
+          message: "The current password is not right.",
+          code: "incorrect",
+        },
+      ],
+    );
+  }
+  issueSession(res, user);
+  await recordAudit(
+    { query },
+    req,
+    "auth.password_changed",
+    { type: "app_user", id: user.id, label: user.username },
+    `${user.username} changed their password.`,
+  );
+  res.json({ user: toMe(user) });
+}
 
 // POST /api/auth/login: the same login for every role.
 // Right username and password: sets the session cookie and returns the user.

@@ -53,6 +53,28 @@ export function hashPassword(password) {
   return argon2.hash(password, { type: argon2.argon2id });
 }
 
+// Changes a user's password if the current one is right. Every existing session of the
+// user ends (session_version + 1). Returns the updated user, or null when the current
+// password is wrong.
+export async function changePassword(userId, currentPassword, newPassword) {
+  const { rows } = await query(
+    "SELECT password_hash FROM app_user WHERE id = $1 AND auth_provider = 'local'",
+    [userId],
+  );
+  const ok = await argon2
+    .verify(rows[0]?.password_hash ?? DUMMY_HASH, currentPassword)
+    .catch(() => false);
+  if (!rows[0] || !ok) return null;
+  const { rows: updated } = await query(
+    `UPDATE app_user
+        SET password_hash = $2, session_version = session_version + 1, updated_at = now()
+      WHERE id = $1
+      RETURNING ${PUBLIC_COLUMNS}`,
+    [userId, await hashPassword(newPassword)],
+  );
+  return updated[0];
+}
+
 // Creates the student's own account, linked to their student row. Returns the new user.
 // The database refuses a second account for the same student or a taken username
 // (unique keys), so two signups at the same moment cannot both win.
