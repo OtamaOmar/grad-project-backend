@@ -2,10 +2,29 @@
 
 How a predicted headcount is traced to the rule that set each probability `p`, and how that trace is shown without student identifiers.
 
-Sources: [database-design.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/database-design.md) (`forecast_line`, `offering_forecast`, `enrollment`, `source_reference`, `source_passage`, §17a) and [phase1-implementation-roadmap.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/phase1-implementation-roadmap.md) (course-detail aggregate, explanation context).
+Sources: [database-design.md](database-design.md) (`forecast_line`, `offering_forecast`, `enrollment`, `source_reference`, `source_passage`, §17a) and [phase1-implementation-roadmap.md](phase1-implementation-roadmap.md) (course-detail aggregate, explanation context).
 
-Related: [api-contract.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/api-contract.md), [forecast-io.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/forecast-io.md).
+Related: [api-contract.md](api-contract.md), [forecast-io.md](forecast-io.md).
 
+
+## Locked decisions (2026-11-27)
+
+These team and doctor decisions replace older text in this document. Where a seed does not match them yet, the seed is the gap (Backend A), not the rule.
+
+| Topic | Rule now |
+|---|---|
+| Pass/fail | The file has letters only, no percentages, so the pass test cannot run. `attempt_state` comes from the letter: `A+` to `D`, `P`, `TR` passed (TR credits count toward standing); `F` failed; `W`, `WP`, `WF` withdrawn (retake next term); `I` unresolved; blank in the latest term active, blank earlier unresolved |
+| Repeated course | The highest grade counts in the CGPA (confirmed by the doctor). Repeat demand uses each course's past repeat rate from history, not 0 |
+| Cohort and bylaw | Cohort year = the year of the student's earliest term in the file (spring < summer < fall). Cohort 2024 or earlier is `old_cs`; first term in 2025 or later is `bylaw_2025`. The two bylaws are never added together |
+| 2025 credit cap, CGPA 3.0 up to 3.3 | 21 credits after the first semester (no longer null). CGPA exactly 3.00 counts |
+| Old bylaw caps | First semester 19. After the first semester, CGPA above 3.0 up to 21. CGPA below 2.0, 13 |
+| Graduating student | Takes exactly the credits still needed, even above the cap or below CGPA 2.0. Summer 9 for graduating |
+| Training and internship | Count toward the term cap in both bylaws (`counts_toward_registration_cap` true) |
+| Old standing bands | Freshman 0-35, sophomore 36-70, junior 71-105, senior 106+ passed credits |
+| Senior projects `CSCI 495` / `CSCI 496` | 100 passed credits |
+| Internships `CSCI 490` / `COMM 401` | 67 passed credits (no senior standing) |
+| Track and paths | Inferred from course history: only Media electives `media`, only Big Data `big_data`, both `general`, none null. Null still means no sheet demand |
+| Class sizes | Lecture 60 (75 on request), tutorial 30, computing lab 30, physics and circuits labs 15. No minimum to open |
 ## Whole system
 
 Evidence is the stored reason a headcount is what it is. A forecast run writes one `offering_forecast` row per course and, for the pairs that matter, one `forecast_line` per student and course. The line records the first ordered rule that matched (report Table 8) and whether the credit-cap walk later set that `p` to 0. The headcount is the sum of the `p` values that remain. Unresolved pairs stay out of the sum and are counted.
@@ -34,11 +53,11 @@ The forecast does not read the file label as the pass rule. Import derives `atte
 | `status` | File label only. Never the pass/fail rule by itself | `registered`, `passed`, `failed`, `withdrawn`, `incomplete` |
 | `percentage` | Course result fed to the pass test. Null when the file has no mark. Not a substitute for `status` | `numeric(5,2)`, 0 to 100, or null |
 | `final_exam_percentage` | Required for the 2025 pass test when the bylaw sets a final-exam floor. Null when the file does not carry it | `numeric(5,2)`, 0 to 100, or null |
-| `attempt_state` | Rule-engine input. Derived at import from `status`, term context, and the §7 pass test. Not rewritten by a database trigger | `passed`, `failed`, `active`, `withdrawn`, `unresolved`, `not_started` |
+| `attempt_state` | Rule-engine input. Derived at import from the letter grade and the term (see Locked decisions). Not rewritten by a database trigger | `passed`, `failed`, `active`, `withdrawn`, `unresolved`, `not_started` |
 
 `not_started` is never loaded from the file. It is the engine’s value for a sheet course with no enrollment row. A repeat is a new `enrollment` row in a later term. There is no unique `(student_id, course_id)`.
 
-Pass test (§7): `percentage >= bylaw.pass_percentage`, and, when `bylaw.final_exam_min_percentage` is set, `final_exam_percentage >= final_exam_min_percentage`. If a value the test needs is null, the test is not run and the file label is kept. A mismatch between a `passed`/`failed` label and the §7 outcome is flagged in the load report. It does not block the insert.
+Pass test (§7): `percentage >= bylaw.pass_percentage`, and, when `bylaw.final_exam_min_percentage` is set, `final_exam_percentage >= final_exam_min_percentage`. The current file has letters only, so `percentage` and `final_exam_percentage` are null and the test is not run: `attempt_state` comes from the letter mapping in Locked decisions. The test applies again once a file with percentages arrives.
 
 ### Stored `forecast_line` (coordinator-only)
 
@@ -69,7 +88,7 @@ Cap walk (§17a): candidates are taken in official sheet order. Each candidate�
 
 `GET /api/forecast-runs/:runId/courses/:courseId` returns aggregates by rule. Course detail shows rule 1–6 counts, unresolved reasons, and the trimmed-by-cap count. `POST /api/explanations` sends the same kind of aggregate to FastAPI: counts by rule, no student identifiers. Do not put `student_id`, the university ID, or a list of lines in this object.
 
-The numbers below are a shape example. They are not the Table 10 fixture (that check is in [forecast-io.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/forecast-io.md)).
+The numbers below are a shape example. They are not the Table 10 fixture (that check is in [forecast-io.md](forecast-io.md)).
 
 ```json
 {

@@ -2,10 +2,29 @@
 
 What one baseline forecast run reads, what it writes, and what the coordinator dashboard shows. The opening decision is a later request, not a field of the run.
 
-Sources: [database-design.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/database-design.md) §3 (`offering_forecast`, `offering_decision`, `forecast_line`), §17a, and [phase1-implementation-roadmap.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/phase1-implementation-roadmap.md) §4.2–§4.3 and §4.5.
+Sources: [database-design.md](database-design.md) §3 (`offering_forecast`, `offering_decision`, `forecast_line`), §17a, and [phase1-implementation-roadmap.md](phase1-implementation-roadmap.md) §4.2–§4.3 and §4.5.
 
-Related: [api-contract.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/api-contract.md), [evidence-format.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/evidence-format.md).
+Related: [api-contract.md](api-contract.md), [evidence-format.md](evidence-format.md).
 
+
+## Locked decisions (2026-11-27)
+
+These team and doctor decisions replace older text in this document. Where a seed does not match them yet, the seed is the gap (Backend A), not the rule.
+
+| Topic | Rule now |
+|---|---|
+| Pass/fail | The file has letters only, no percentages, so the pass test cannot run. `attempt_state` comes from the letter: `A+` to `D`, `P`, `TR` passed (TR credits count toward standing); `F` failed; `W`, `WP`, `WF` withdrawn (retake next term); `I` unresolved; blank in the latest term active, blank earlier unresolved |
+| Repeated course | The highest grade counts in the CGPA (confirmed by the doctor). Repeat demand uses each course's past repeat rate from history, not 0 |
+| Cohort and bylaw | Cohort year = the year of the student's earliest term in the file (spring < summer < fall). Cohort 2024 or earlier is `old_cs`; first term in 2025 or later is `bylaw_2025`. The two bylaws are never added together |
+| 2025 credit cap, CGPA 3.0 up to 3.3 | 21 credits after the first semester (no longer null). CGPA exactly 3.00 counts |
+| Old bylaw caps | First semester 19. After the first semester, CGPA above 3.0 up to 21. CGPA below 2.0, 13 |
+| Graduating student | Takes exactly the credits still needed, even above the cap or below CGPA 2.0. Summer 9 for graduating |
+| Training and internship | Count toward the term cap in both bylaws (`counts_toward_registration_cap` true) |
+| Old standing bands | Freshman 0-35, sophomore 36-70, junior 71-105, senior 106+ passed credits |
+| Senior projects `CSCI 495` / `CSCI 496` | 100 passed credits |
+| Internships `CSCI 490` / `COMM 401` | 67 passed credits (no senior standing) |
+| Track and paths | Inferred from course history: only Media electives `media`, only Big Data `big_data`, both `general`, none null. Null still means no sheet demand |
+| Class sizes | Lecture 60 (75 on request), tutorial 30, computing lab 30, physics and circuits labs 15. No minimum to open |
 ## Whole system
 
 A forecast run is a deterministic snapshot for one target term. Demand comes from the official study-plan sheets (`plan_template` / `plan_slot`), not from every course whose prerequisites a student happens to meet. The same inputs and the same ordered rules produce the same `offering_forecast` and `forecast_line` rows, aside from ids and timestamps. The run does not approve anything. A person records opening flags on `offering_decision` afterward.
@@ -56,7 +75,7 @@ The prerequisite query now supports `requisite_type = 'credits'`: `min_credits_p
 | `course_offering_history` | Term types that have attempts. Rule 1 fires only when this shows a pattern. With no history it never fires |
 | `grade_scale_for_bylaw` | Letter and CGPA in application code. Not the pass test |
 
-Pass test, requisite evaluation, and `deriveAttemptState` are Node functions. Enrollment `percentage` and `final_exam_percentage` feed the pass test. `attempt_state` is what the ordered rules see. Details are in [evidence-format.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/evidence-format.md).
+Requisite evaluation and `deriveAttemptState` are Node functions. `attempt_state` is what the ordered rules see; it comes from the letter mapping above, because the file has no percentages for the pass test. Details are in [evidence-format.md](evidence-format.md).
 
 Rules 0–7 run in order. The first match wins. Rules 4 and 6 run only for the old bylaw when that course has at least 30 prior attempts. Otherwise the course’s `method` is `simple_count`. Any 2025 course is `simple_count`. An unknown repeat intention is unresolved. Lines are stored only for rules 1–6 and for unresolved pairs. Rules 0 and 7 (`p = 0`) are not stored.
 
@@ -102,15 +121,15 @@ The explanation service writes none of these tables.
 | Count | Who it counts |
 |---|---|
 | `unresolved_pair_count` | Students whose `p` for this course is unresolved |
-| `null_cap_student_count` | Students on this course whose matched maximum is null (2025, CGPA 3.0 up to but not including 3.3, not graduating) |
-| `first_year_undefined_student_count` | Old-bylaw students above 3.0 held at 19 because “first year” is undefined |
+| `null_cap_student_count` | Students on this course whose matched maximum is null. The 2025 CGPA 3.0-3.3 band is 21 (locked), so this counts only rows a seed still leaves null |
+| `first_year_undefined_student_count` | Old-bylaw students whose first-semester status cannot be read from the file (the 21-credit rule applies after the first semester) |
 | `cap_flag_unknown_student_count` | Students whose cap trim met a course with a null `counts_toward_registration_cap` |
 
 Class sizes stored on the row, from config, not from the bylaw: lecture 60, tutorial 30, `physics_circuits` lab 15, `computing` lab 30. A missing component stores null for that class size. Implied sections are `ceil(predicted_headcount ÷ class size)`, and null when the class size is null.
 
 Fixture check (report Table 10 shape): `1.00 + 0.80 + 0.25 = 2.05` headcount, which implies 1 lecture section. Tests compare a second run with the first. Ids and timestamps may differ. The other columns may not.
 
-Course detail uses the aggregate in [evidence-format.md](/cursor/stores/bc-a41049f8-3811-4a24-a05c-7bb12ec21663/docs/evidence-format.md). It does not list student ids.
+Course detail uses the aggregate in [evidence-format.md](evidence-format.md). It does not list student ids.
 
 ### Decision is a separate PUT
 
@@ -133,4 +152,4 @@ The table stores three yes/no flags. It does not store section counts, and the c
 | Banner | When the API is serving that synthetic set, the dashboard shows `SyntheticDataBanner`. Forecast numbers are arithmetic on fixtures, not institutional results |
 | MAE | Not computed and not displayed. The Table 11 evaluation row is blocked on Nile ask 1. `is_evaluation_replay` stays false |
 | 2025 sheet demand | Seed 015 now provides four track templates and 180 slots for the printed english_1/calculus_1 path, including summer training. Two compulsory positions per track and unprinted entry paths remain unresolved; never guess those mappings (see features/db-seed-reference-data.md). 2025 courses still use `simple_count` if a run reaches them. Their headcount is never added to an old-bylaw headcount |
-| Other nulls that stay null | Old senior minimum (do not seed 106), old “first year” (never matched), `max_attempts`, `min_students_to_open`, training and internship `counts_toward_registration_cap`, `course_equivalence` (empty) |
+| Other nulls that stay null | `max_attempts` (no limit), `min_students_to_open` (no minimum), `course_equivalence` (empty: the bylaws are never mapped). Old senior minimum (106), the old first-semester rule and training/internship counting toward the cap are now decided (see Locked decisions) |
