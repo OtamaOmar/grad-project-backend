@@ -96,17 +96,20 @@ export async function putDecision(req, res) {
 
   let decisionId;
   try {
-    decisionId = await saveDecision({
-      termId,
-      courseId,
-      forecastId: forecast?.id ?? null,
-      flags,
-      notes,
-      approver: {
-        id: req.user.id,
-        name: req.user.full_name || req.user.username,
+    decisionId = await saveDecision(
+      {
+        termId,
+        courseId,
+        forecastId: forecast?.id ?? null,
+        flags,
+        notes,
+        approver: {
+          id: req.user.id,
+          name: req.user.full_name || req.user.username,
+        },
       },
-    });
+      req,
+    );
   } catch (err) {
     // The only foreign key left unchecked above is the term.
     if (err.code === "23503")

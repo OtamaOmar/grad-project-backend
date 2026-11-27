@@ -39,6 +39,9 @@ async function cleanUp() {
   await pool.query("DELETE FROM offering_forecast WHERE forecast_run_id = $1", [
     RUN_ID,
   ]);
+  await pool.query("DELETE FROM audit_event WHERE actor_username = ANY($1)", [
+    [COORDINATOR, STUDENT],
+  ]);
   await pool.query("DELETE FROM app_user WHERE username = ANY($1)", [
     [COORDINATOR, STUDENT],
   ]);
@@ -386,4 +389,61 @@ test("data gaps: coordinators cannot write to the register", async () => {
     ).status,
     403,
   );
+});
+
+// Every save of a decision is in the audit log, in the same transaction as the save.
+test("each decision save is audited with who saved it and what changed", async () => {
+  const events = (decisionId) =>
+    pool
+      .query(
+        `SELECT action, category, actor_username, actor_role, entity_label, summary, details
+           FROM audit_event
+          WHERE entity_type = 'offering_decision' AND entity_id = $1
+          ORDER BY id`,
+        [String(decisionId)],
+      )
+      .then((r) => r.rows);
+
+  const first = await decide({
+    course_id: otherCourse.id,
+    academic_term_id: term.id,
+    lecture_open: true,
+    tutorial_open: true,
+  });
+  assert.equal(first.status, 200);
+  const before = await events(first.json.id);
+  const saved = before.at(-1);
+  assert.equal(saved.action, "offering_decision.saved");
+  assert.equal(saved.category, "offering");
+  assert.equal(saved.actor_username, COORDINATOR);
+  assert.equal(saved.actor_role, "coordinator");
+  assert.ok(saved.entity_label.startsWith(`${otherCourse.code}, `));
+  assert.equal(saved.details.forecast_id, otherForecastId);
+
+  const second = await decide({
+    course_id: otherCourse.id,
+    academic_term_id: term.id,
+    lecture_open: true,
+    tutorial_open: false,
+    decision_notes: "Tutorial merged with the other section.",
+  });
+  assert.equal(second.status, 200);
+  const after = await events(first.json.id);
+  assert.equal(after.length, before.length + 1);
+  assert.deepEqual(after.at(-1).details.changes, {
+    tutorial_open: { from: true, to: false },
+    decision_notes: {
+      from: null,
+      to: "Tutorial merged with the other section.",
+    },
+  });
+
+  // A refused save writes nothing.
+  const refused = await decide({
+    course_id: otherCourse.id,
+    academic_term_id: term.id,
+    lecture_open: false,
+  });
+  assert.equal(refused.status, 400);
+  assert.equal((await events(first.json.id)).length, after.length);
 });
