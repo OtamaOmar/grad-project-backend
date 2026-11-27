@@ -1,0 +1,53 @@
+# Runs the team's PR rule on every pull request and on main: a fresh PostgreSQL database,
+# migrations and seeds applied twice (they must be repeatable), the SYN test fixtures,
+# then every test suite.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: grad_ci
+          POSTGRES_PASSWORD: grad_ci
+          POSTGRES_DB: grad_ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U grad_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI database and secret; nothing here is used outside this job.
+      DATABASE_URL: postgres://grad_ci:grad_ci@localhost:5432/grad_ci_test
+      TEST_DATABASE_URL: postgres://grad_ci:grad_ci@localhost:5432/grad_ci_test
+      JWT_SECRET: ci-only-secret-ci-only-secret-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Migrate and seed (first run)
+        run: npm run migrate:up && npm run db:seed
+      - name: Migrate and seed again (must change nothing and not fail)
+        run: npm run migrate:up && npm run db:seed
+      - name: Load the SYN test fixtures
+        run: >-
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --single-transaction
+          -f db/fixtures/test/001_syn_terms.sql
+          -f db/fixtures/test/002_syn_students.sql
+          -f db/fixtures/test/003_syn_enrollments.sql
+      - run: npm run test:app
+      - run: npm run test:db-audit
+      - run: npm run test:db-credits
+      - run: npm run test:db-hours
