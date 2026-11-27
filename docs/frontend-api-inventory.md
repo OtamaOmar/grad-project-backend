@@ -6,8 +6,8 @@ Snapshot 2026-11-27, taken from frontend `main` (`src/services/api/`) and backen
 
 | Status | Calls |
 |---|---|
-| Built | 82 |
-| Planned (in the contract, with owner) | 7 |
+| Built | 83 |
+| Planned (in the contract, with owner) | 6 |
 | Mock only (not in the contract) | 21 |
 | Phase 2 (advisor) | 6 |
 | **Total** | **116** |
@@ -78,7 +78,7 @@ Screen owner: Abdelrahman.
 | `GET /coordinator/study-plan-baseline/:templateId` | `coordinator/studyPlans.js` | Mock only | Proposal: reuse the admin study-plan reads with coordinator access |
 | `GET /coordinator/terms` | `coordinator/terms.js` | Mock only | Proposal: reuse the admin term reads with coordinator access |
 | `GET /courses/:courseId/rules` | `coordinator/rules.js` | Planned, Ayman |  |
-| `GET /data-gaps` | `coordinator/dataGaps.js` | Planned, owner not set |  |
+| `GET /data-gaps` | `coordinator/dataGaps.js` | Built |  |
 | `GET /forecast-runs` | `coordinator/forecastRuns.js` | Planned, Ayman |  |
 | `POST /forecast-runs` | `coordinator/forecastRuns.js` | Planned, Ayman |  |
 | `GET /forecast-runs/:runId/courses` | `coordinator/forecastRuns.js` | Planned, Ayman |  |

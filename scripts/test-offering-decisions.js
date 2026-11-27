@@ -312,3 +312,78 @@ test("GET searches, filters, sorts and pages like the mock", async () => {
   assert.equal((await list("sort=password_hash")).status, 400);
   assert.equal((await list("page_size=500")).status, 400);
 });
+
+// GET /api/data-gaps: the gap register, read only, for coordinators.
+function gaps(qs = "", cookie = coordinatorCookie) {
+  return call("GET", `/api/data-gaps${qs ? `?${qs}` : ""}`, { cookie });
+}
+
+test("data gaps: coordinators only (student 403, signed out 401)", async () => {
+  const login = await call("POST", "/api/auth/login", {
+    body: { username: STUDENT, password: PASSWORD },
+  });
+  assert.equal((await gaps("", sessionCookie(login))).status, 403);
+  assert.equal((await gaps("", null)).status, 401);
+});
+
+test("data gaps: lists the register with open and resolved totals", async () => {
+  const res = await gaps("page_size=100");
+  assert.equal(res.status, 200);
+  const db = (
+    await pool.query(
+      "SELECT count(*)::int AS total, count(*) FILTER (WHERE status = 'open')::int AS open FROM data_gap",
+    )
+  ).rows[0];
+  assert.equal(res.json.total, db.total);
+  assert.equal(res.json.open_count, db.open);
+  assert.equal(res.json.resolved_count, db.total - db.open);
+  const first = res.json.items[0];
+  for (const key of [
+    "id",
+    "category",
+    "severity",
+    "affected_entity",
+    "status",
+    "description",
+    "source_reference",
+    "notes",
+    "created_at",
+    "updated_at",
+  ]) {
+    assert.ok(key in first, `item has ${key}`);
+  }
+});
+
+test("data gaps: filters by status, pages, and refuses unknown keys and sorts", async () => {
+  const open = await gaps("status=open&page_size=100");
+  assert.ok(open.json.items.every((gap) => gap.status === "open"));
+  assert.equal(open.json.total, open.json.open_count);
+
+  const paged = await gaps("page_size=1&page=2");
+  assert.equal(paged.json.page, 2);
+  assert.equal(
+    paged.json.items.length,
+    Math.min(1, Math.max(0, paged.json.total - 1)),
+  );
+
+  assert.equal((await gaps("approved_by=1")).status, 400);
+  assert.equal((await gaps("sort=password_hash")).status, 400);
+});
+
+test("data gaps: coordinators cannot write to the register", async () => {
+  const body = { category: "x", affected_entity: "y", description: "z" };
+  assert.equal(
+    (await call("POST", "/api/data-gaps", { cookie: coordinatorCookie, body }))
+      .status,
+    404,
+  );
+  assert.equal(
+    (
+      await call("POST", "/api/admin/data-gaps", {
+        cookie: coordinatorCookie,
+        body,
+      })
+    ).status,
+    403,
+  );
+});

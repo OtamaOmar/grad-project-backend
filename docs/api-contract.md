@@ -117,7 +117,7 @@ One envelope, defined in [contracts/errors.md](../contracts/errors.md):
 | `GET /api/forecast-runs/:runId/courses` | Coordinator | Planned, Ayman | Dashboard rows for one run |
 | `GET /api/forecast-runs/:runId/courses/:courseId` | Coordinator | Planned, Ayman | One course: aggregates by rule, no student ids. See [evidence-format.md](evidence-format.md) |
 | `GET /api/courses/:courseId/rules` | Coordinator | Planned, Ayman | Stored requisite groups for that course |
-| `GET /api/data-gaps` | Coordinator | Planned, owner not set | Open holes. Status is `open` or `resolved` |
+| `GET /api/data-gaps` | Coordinator | Built | The data-gap register, read only. Same rows, filters (`q`, `status`, `category`, `severity`, `affected_entity`), sorts and paging as `GET /api/admin/data-gaps`, plus `open_count` and `resolved_count`. Status is `open` or `resolved`. Writes stay admin-only |
 | `POST /api/explanations` | Coordinator | Planned, Omar (blocked on the FastAPI service) | Builds context from stored rows and calls FastAPI. Does not store the answer |
 | `GET /health` (FastAPI) | Public on FastAPI | Planned, AI team | No service key. FastAPI binds `127.0.0.1` |
 | `POST /explain` (FastAPI) | Node only | Planned, AI team | Requires `X-Service-Key` |
