@@ -12,6 +12,17 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  bylawsQuerySchema,
+  createBylawSchema,
+  getBylawById,
+  getBylaws,
+  getBylawsSummary,
+  patchBylaw,
+  postBylaw,
+  removeBylaw,
+  updateBylawSchema,
+} from "../controllers/adminBylaws.controller.js";
+import {
   creditLimitsQuerySchema,
   dataGapsQuerySchema,
   getCreditLimits,
@@ -93,7 +104,7 @@ apiRouter.get(
   getDecisions,
 );
 
-// Admin only (read-only for now)
+// Admin only
 const admin = [authenticate, requireRole("admin")];
 apiRouter.get("/admin/users/summary", ...admin, getUsersSummary);
 apiRouter.get(
@@ -117,3 +128,24 @@ apiRouter.get(
   getDataGaps,
 );
 apiRouter.get("/admin/data-gaps/:id", ...admin, getDataGapById);
+apiRouter.get("/admin/bylaws/summary", ...admin, getBylawsSummary);
+apiRouter.get(
+  "/admin/bylaws",
+  ...admin,
+  validate({ query: bylawsQuerySchema }),
+  getBylaws,
+);
+apiRouter.get("/admin/bylaws/:id", ...admin, getBylawById);
+apiRouter.post(
+  "/admin/bylaws",
+  ...admin,
+  validate({ body: createBylawSchema }),
+  postBylaw,
+);
+apiRouter.patch(
+  "/admin/bylaws/:id",
+  ...admin,
+  validate({ body: updateBylawSchema }),
+  patchBylaw,
+);
+apiRouter.delete("/admin/bylaws/:id", ...admin, removeBylaw);

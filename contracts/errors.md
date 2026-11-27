@@ -21,7 +21,7 @@ Code: `src/middleware/errorHandler.js` and `src/utils/AppError.js`. Frontend rea
 |---|---|
 | `code` | Stable, upper snake case. The frontend branches on `code`, never on `message` |
 | `message` | Short English sentence for a person. May change wording |
-| `details` | Only when there is something field-level to show. For validation errors it is a list of `{ path, message }`. Absent otherwise |
+| `details` | Only when there is something to show. For field problems it is a list of `{ path, message, code }`, where `code` is a short machine code (Zod's issue code such as `too_small`, or one of ours such as `taken`). `BYLAW_IN_USE` sends `{ related: { <kind>_count: n } }` instead. Absent otherwise |
 
 A successful response never contains `error`. A `204` has no body.
 
@@ -40,6 +40,8 @@ A successful response never contains `error`. A `204` has no body.
 | 404 | `STUDENT_NOT_FOUND` | Signup with a university ID that is not in `student` |
 | 409 | `ALREADY_LINKED` | Signup for a student who already has an account |
 | 409 | `USERNAME_TAKEN` | Signup with a username another account uses |
+| 409 | `BYLAW_CODE_TAKEN` | Creating a bylaw with a code another bylaw uses |
+| 409 | `BYLAW_IN_USE` | Deleting a bylaw that courses, programs, limits, grades, bands, plans or students still refer to. `details.related` counts them |
 | 429 | `RATE_LIMITED` | More than 20 auth requests from one IP in 15 minutes |
 | 500 | `INTERNAL_ERROR` | An unexpected server error. The cause is logged on the server (stack only) and never sent to the client |
 
