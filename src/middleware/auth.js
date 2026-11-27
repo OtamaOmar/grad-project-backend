@@ -1,19 +1,18 @@
 import { findActiveUserById } from "../services/user.service.js";
-import {
-  readSessionUserId,
-  SESSION_COOKIE,
-} from "../services/session.service.js";
+import { readSession, SESSION_COOKIE } from "../services/session.service.js";
 import { forbidden, unauthenticated } from "../utils/AppError.js";
 
-// Lets the request through only with a valid login cookie that points to an active user.
+// Lets the request through only with a valid login cookie that points to an active user
+// and was issued after that user's last logout (matching session_version).
 // It loads that user from the database into req.user, so nothing the browser sends
 // (body, query, headers) can change who the request is. Otherwise: 401.
 export async function authenticate(req, res, next) {
-  const userId = readSessionUserId(req.cookies?.[SESSION_COOKIE]);
-  if (!userId) throw unauthenticated();
+  const session = readSession(req.cookies?.[SESSION_COOKIE]);
+  if (!session) throw unauthenticated();
 
-  const user = await findActiveUserById(userId);
-  if (!user) throw unauthenticated();
+  const user = await findActiveUserById(session.userId);
+  if (!user || user.session_version !== session.version)
+    throw unauthenticated();
 
   req.user = user;
   next();

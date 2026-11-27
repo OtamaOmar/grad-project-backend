@@ -1,8 +1,14 @@
 import { z } from "zod";
-import { clearSession, issueSession } from "../services/session.service.js";
+import {
+  clearSession,
+  issueSession,
+  readSession,
+  SESSION_COOKIE,
+} from "../services/session.service.js";
 import { findStudentForSignup } from "../services/student.service.js";
 import {
   createStudentUser,
+  revokeSessions,
   saveOnboarding,
   toMe,
   verifyCredentials,
@@ -58,12 +64,16 @@ export async function login(req, res) {
   if (!user.is_active) {
     throw new AppError(403, "ACCOUNT_INACTIVE", "This account is deactivated.");
   }
-  issueSession(res, user.id);
+  issueSession(res, user);
   res.json({ user: toMe(user) });
 }
 
-// POST /api/auth/logout: deletes the session cookie. Answers 204 (no body).
-export function logout(req, res) {
+// POST /api/auth/logout: revokes the session on the server (the token can never be used
+// again, even if it was copied) and deletes the cookie. Always answers 204, even when the
+// session had already expired, so the browser is never left holding a cookie.
+export async function logout(req, res) {
+  const session = readSession(req.cookies?.[SESSION_COOKIE]);
+  if (session) await revokeSessions(session.userId);
   clearSession(res);
   res.status(204).end();
 }
@@ -124,7 +134,7 @@ export async function signup(req, res) {
     throw err;
   }
 
-  issueSession(res, user.id);
+  issueSession(res, user);
   res.status(201).json({ user: toMe(user) });
 }
 
