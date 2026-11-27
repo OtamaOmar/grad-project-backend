@@ -1230,3 +1230,65 @@ test("audit: sign-ins are logged; list, detail and a safe CSV export", async () 
     "DELETE FROM audit_event WHERE entity_label = 'zz_csv_probe'",
   );
 });
+
+test("university data and imports: real registrations, honest empty lists", async () => {
+  const summary = await call("GET", "/api/admin/university-data/summary", {
+    cookie: adminCookie,
+  });
+  const { rows } = await pool.query(
+    "SELECT count(*)::int AS n FROM enrollment",
+  );
+  assert.equal(summary.json.registrations.records, rows[0].n);
+  assert.equal(
+    summary.json.registrations.accepted + summary.json.registrations.flagged,
+    rows[0].n,
+  );
+  assert.equal(summary.json.faculty.total, 0);
+
+  const flagged = await call(
+    "GET",
+    "/api/admin/university-data/registrations?validation_flag=unresolved_result&page_size=5",
+    { cookie: adminCookie },
+  );
+  assert.ok(
+    flagged.json.items.every(
+      (r) => r.attempt_state === "unresolved" && r.flagged,
+    ),
+  );
+  const any = await call(
+    "GET",
+    "/api/admin/university-data/registrations?page_size=1",
+    {
+      cookie: adminCookie,
+    },
+  );
+  const detail = await call(
+    "GET",
+    `/api/admin/university-data/registrations/${any.json.items[0].id}`,
+    { cookie: adminCookie },
+  );
+  assert.ok(detail.json.attempts.length >= 1);
+  assert.equal(typeof detail.json.credits_passed, "number");
+
+  for (const path of [
+    "university-data/snapshots",
+    "university-data/faculty",
+    "imports",
+  ]) {
+    const list = await call("GET", `/api/admin/${path}?q=x&page=1`, {
+      cookie: adminCookie,
+    });
+    assert.deepEqual([list.status, list.json.total], [200, 0]);
+  }
+  const upload = await call("POST", "/api/admin/imports", {
+    cookie: adminCookie,
+    body: {},
+  });
+  assert.equal(upload.status, 501);
+  assert.equal(upload.json.error.code, "NOT_AVAILABLE");
+  assert.equal(
+    (await call("GET", "/api/admin/imports/summary", { cookie: adminCookie }))
+      .json.total_batches,
+    0,
+  );
+});

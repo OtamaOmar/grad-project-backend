@@ -43,6 +43,7 @@ A successful response never contains `error`. A `204` has no body.
 | 409 | `BYLAW_CODE_TAKEN` | Creating a bylaw with a code another bylaw uses |
 | 409 | `BYLAW_IN_USE` | Deleting a bylaw that courses, programs, limits, grades, bands, plans or students still refer to. `details.related` counts them |
 | 429 | `RATE_LIMITED` | More than 20 auth requests from one IP in 15 minutes |
+| 501 | `NOT_AVAILABLE` | An admin action that needs a pipeline the app does not have yet (file ingestion for imports and snapshots) |
 | 500 | `INTERNAL_ERROR` | An unexpected server error. The cause is logged on the server (stack only) and never sent to the client |
 
 A new code is a contract change: add it to this table in the same pull request.
