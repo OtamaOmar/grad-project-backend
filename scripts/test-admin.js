@@ -246,7 +246,8 @@ test("data gaps summary counts the register", async () => {
   });
   assert.equal(res.status, 200);
   assert.equal(res.json.open + res.json.resolved, res.json.total);
-  assert.equal(res.json.open_by_severity, null);
+  const bySeverity = res.json.open_by_severity;
+  assert.deepEqual(Object.keys(bySeverity), ["high", "medium", "low"]);
   assert.equal(res.json.linked_import_issues, null);
   assert.equal(
     res.json.by_category.reduce((sum, c) => sum + c.open + c.resolved, 0),
@@ -686,6 +687,47 @@ test("credit limits: create, edit, reorder and remove rules, audited", async () 
       "credit_limit.updated",
       "credit_limit.reordered",
       "credit_limit.deleted",
+    ],
+  );
+});
+
+test("data gaps: record and resolve a gap (notes required), audited", async () => {
+  const created = await call("POST", "/api/admin/data-gaps", {
+    cookie: adminCookie,
+    body: {
+      category: "zz_test_gap",
+      description: "A test gap.",
+      affected_entity: "course",
+      severity: "high",
+      bylaw_scope: ["old_cs"],
+    },
+  });
+  assert.equal(created.status, 201);
+  assert.equal(created.json.status, "open");
+  assert.equal(created.json.severity, "high");
+  assert.deepEqual(created.json.bylaw_scope, ["old_cs"]);
+  const id = created.json.id;
+  const patch = (body) =>
+    call("PATCH", `/api/admin/data-gaps/${id}`, { cookie: adminCookie, body });
+
+  const noNotes = await patch({ status: "resolved" });
+  assert.equal(noNotes.status, 400);
+  assert.equal(noNotes.json.error.details[0].code, "required_to_resolve");
+  const resolved = await patch({
+    status: "resolved",
+    notes: "Confirmed by the doctor on 2026-11-27.",
+  });
+  assert.equal(resolved.json.status, "resolved");
+  assert.equal((await patch({ severity: "urgent" })).status, 400);
+
+  const { rows: audit } = await pool.query(
+    "SELECT action, severity FROM audit_event WHERE entity_label = 'zz_test_gap' ORDER BY id",
+  );
+  assert.deepEqual(
+    audit.map((a) => [a.action, a.severity]),
+    [
+      ["data_gap.created", "warning"],
+      ["data_gap.resolved", "info"],
     ],
   );
 });
