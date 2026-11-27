@@ -12,6 +12,22 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  createProgramSchema,
+  createTrackSchema,
+  getProgramById,
+  getPrograms,
+  getProgramsSummary,
+  getTracks,
+  patchProgram,
+  patchTrack,
+  postProgram,
+  postTrack,
+  programsQuerySchema,
+  tracksQuerySchema,
+  updateProgramSchema,
+  updateTrackSchema,
+} from "../controllers/adminPrograms.controller.js";
+import {
   getGradeScaleById,
   getGradeScales,
   getGradeScalesSummary,
@@ -318,4 +334,42 @@ apiRouter.put(
   ...admin,
   validate({ body: replaceEntriesSchema }),
   putGradeEntries,
+);
+apiRouter.get("/admin/programs/summary", ...admin, getProgramsSummary);
+apiRouter.get(
+  "/admin/programs",
+  ...admin,
+  validate({ query: programsQuerySchema }),
+  getPrograms,
+);
+apiRouter.get("/admin/programs/:id", ...admin, getProgramById);
+apiRouter.post(
+  "/admin/programs",
+  ...admin,
+  validate({ body: createProgramSchema }),
+  postProgram,
+);
+apiRouter.patch(
+  "/admin/programs/:id",
+  ...admin,
+  validate({ body: updateProgramSchema }),
+  patchProgram,
+);
+apiRouter.post(
+  "/admin/programs/:id/tracks",
+  ...admin,
+  validate({ body: createTrackSchema }),
+  postTrack,
+);
+apiRouter.get(
+  "/admin/tracks",
+  ...admin,
+  validate({ query: tracksQuerySchema }),
+  getTracks,
+);
+apiRouter.patch(
+  "/admin/tracks/:id",
+  ...admin,
+  validate({ body: updateTrackSchema }),
+  patchTrack,
 );
