@@ -93,6 +93,12 @@ One envelope, defined in [contracts/errors.md](../contracts/errors.md):
 | `GET /api/admin/data-gaps/summary` | Admin | Built (`feature/backend-admin-reference`) | `{ total, open, resolved, open_by_severity, by_category, affected_bylaws, linked_import_issues, last_updated_at }`. `open_by_severity` and `linked_import_issues` are null |
 | `GET /api/admin/data-gaps` | Admin | Built (`feature/backend-admin-reference`) | `data_gap` rows plus `gap_code` (`GAP-001`), `severity` (null), `bylaw_scope`, `import_issue_count` (null). List query plus `status`, `category`, `severity`, `affected_entity`; default sort `id` |
 | `GET /api/admin/data-gaps/:id` | Admin | Built (`feature/backend-admin-reference`) | One gap plus `import_issues: []`. `404 NOT_FOUND` for an unknown id |
+| `GET /api/admin/bylaws/summary` | Admin | Built (`feature/backend-admin-bylaws`) | `{ total, active, cross_bylaw_merge_allowed: false, by_bylaw: [{ bylaw_id, code, course_count, program_count, track_count, credit_limit_count, grade_scale_id, grade_letter_count, standing_band_count, plan_template_count, student_count }] }` |
+| `GET /api/admin/bylaws` | Admin | Built (`feature/backend-admin-bylaws`) | Bylaw rows plus `cohort_from`, `cohort_to` (until the next dated bylaw starts), `pass_grade` (the letter whose band starts at the pass percentage), `credit_caps`, `counts`. List query plus `status`; default sort `effective_from_cohort` |
+| `GET /api/admin/bylaws/:id` | Admin | Built (`feature/backend-admin-bylaws`) | List row plus `programs`, `tracks`, `standing_bands` |
+| `POST /api/admin/bylaws` | Admin | Built (`feature/backend-admin-bylaws`) | Body: `code` (2-32 of `a-z 0-9 _`), `name`, `description?`, `graduation_credits`, `training_credits_excluded_from_gpa?`, `pass_percentage` (0-100), `final_exam_min_percentage?`, `status?` (`draft` default, `active`, `retired`), `effective_from_cohort` (1990-2100), `source_reference`. `201` with the detail. `409 BYLAW_CODE_TAKEN`. Audited |
+| `PATCH /api/admin/bylaws/:id` | Admin | Built (`feature/backend-admin-bylaws`) | Any create field. The `code` cannot change (400). Returns the detail. Audited with the before/after of each changed field |
+| `DELETE /api/admin/bylaws/:id` | Admin | Built (`feature/backend-admin-bylaws`) | `204`. `409 BYLAW_IN_USE` with `details.related` while any row refers to the bylaw (retire it instead). Audited |
 | `POST /api/forecast-runs` | Coordinator | Planned, Ayman | Starts one baseline run. Body in [forecast-io.md](forecast-io.md) |
 | `GET /api/forecast-runs?termId=` | Coordinator | Planned, Ayman | Runs for one target term |
 | `GET /api/forecast-runs/:runId/courses` | Coordinator | Planned, Ayman | Dashboard rows for one run |
@@ -184,6 +190,12 @@ Response (same shape as a list item):
 
 `full_name` falls back to the username. `display_id` is the student's university ID (null for staff). `bylaw_scope` is the student's bylaw code, `systemwide` for admins, `both` for other staff.
 
+### Admin changes are audited
+
+Every admin write is saved in the same transaction as an `audit_event` row: who (user id, username, name and role copied in), what (`action` such as `bylaw.updated`, `category`), which record (`entity_type`, `entity_id`, `entity_label`), the before/after of each changed field (`details`), the masked IP (`10.20.x.x`) and a request id. Nothing is written without its audit entry.
+
+Re-running `npm run db:seed` overwrites the seeded columns of reference tables (for example a bylaw's name or pass percentage) with the seed values. Columns the seeds do not write (`bylaw.status`, `bylaw.effective_from_cohort`) keep their admin values.
+
 ### Admin reference reads: what is real and what is null
 
 Every value comes from the database. A field the database has no source for is null or empty, never filled in:
@@ -231,7 +243,7 @@ Python does not compute `p`, headcount, eligibility, sections or approval.
 - Stored explanation rows.
 - Student dashboard, expected offerings and my-courses routes: the frontend mocks propose them, but they need the forecast engine. They are added here when that work starts.
 - Decision history: needs a table that keeps every save.
-- Admin routes other than the reads listed above, including every admin write. Most other admin pages need columns or tables that do not exist yet.
+- Admin routes not listed above. They are added page by page.
 - SSO, password-reset email, refresh tokens.
 - API versioning, GraphQL, WebSockets, a message queue, Redis.
 - Registration write-back, timetable, room scheduling, petitions, internship workflow.
