@@ -23,14 +23,22 @@ let newUserPassword; // the one-time password of the staff account created below
 
 // Removes the accounts, the test bylaw and its audit entries this test created.
 async function cleanUp() {
+  const zzCourses =
+    "SELECT c.id FROM course c JOIN bylaw b ON b.id = c.bylaw_id WHERE b.code = 'zz_course_bylaw'";
+  await pool.query(`DELETE FROM requisite WHERE course_id IN (${zzCourses})`);
+  await pool.query(
+    `DELETE FROM course_component WHERE course_id IN (${zzCourses})`,
+  );
+  await pool.query(`DELETE FROM course WHERE id IN (${zzCourses})`);
   await pool.query(
     "DELETE FROM credit_limit WHERE bylaw_id IN (SELECT id FROM bylaw WHERE code = 'zz_cl_bylaw')",
   );
   await pool.query(
-    "DELETE FROM bylaw WHERE code IN ('zz_test_bylaw', 'zz_cl_bylaw')",
+    "DELETE FROM bylaw WHERE code IN ('zz_test_bylaw', 'zz_cl_bylaw', 'zz_course_bylaw')",
   );
+  await pool.query("DELETE FROM data_gap WHERE category = 'zz_test_gap'");
   await pool.query(
-    "DELETE FROM audit_event WHERE entity_label LIKE 'zz_cl_bylaw%'",
+    "DELETE FROM audit_event WHERE entity_label LIKE 'zz_cl_bylaw%' OR entity_label LIKE 'ZZ %' OR entity_label = 'zz_test_gap'",
   );
   await pool.query(
     "DELETE FROM academic_term WHERE academic_year IN (2098, 2099)",
@@ -728,6 +736,181 @@ test("data gaps: record and resolve a gap (notes required), audited", async () =
     [
       ["data_gap.created", "warning"],
       ["data_gap.resolved", "info"],
+    ],
+  );
+});
+
+test("courses: summary, list filters and detail from the real catalog", async () => {
+  const summary = await call("GET", "/api/admin/courses/summary", {
+    cookie: adminCookie,
+  });
+  const { rows } = await pool.query("SELECT count(*)::int AS n FROM course");
+  assert.equal(summary.json.total, rows[0].n);
+  assert.equal(summary.json.catalog_freeze.enforced, false);
+
+  const none = await call(
+    "GET",
+    "/api/admin/courses?component_type=none&page_size=100",
+    {
+      cookie: adminCookie,
+    },
+  );
+  assert.ok(
+    none.json.items.every((c) => !c.has_components && c.department === null),
+  );
+
+  const withRules = await call(
+    "GET",
+    "/api/admin/courses/requisites?page_size=1",
+    {
+      cookie: adminCookie,
+    },
+  );
+  const rule = withRules.json.items[0];
+  const detail = await call("GET", `/api/admin/courses/${rule.course_id}`, {
+    cookie: adminCookie,
+  });
+  assert.ok(detail.json.requisite_groups.length >= 1);
+  assert.equal(detail.json.requisite_groups[0].items[0].enforcement, "hard");
+});
+
+test("courses: create, edit, prerequisites, audited", async () => {
+  const bylawId = (
+    await pool.query(
+      `INSERT INTO bylaw (code, name, graduation_credits, pass_percentage, source_reference)
+       VALUES ('zz_course_bylaw', 'Course test bylaw', 130, 50, 'Test fixture')
+       RETURNING id::int AS id`,
+    )
+  ).rows[0].id;
+  const create = (body) =>
+    call("POST", "/api/admin/courses", { cookie: adminCookie, body });
+  const base = {
+    bylaw_id: bylawId,
+    credits: 3,
+    source_reference: "Test fixture",
+  };
+
+  const intro = await create({
+    ...base,
+    code: "zz  101",
+    title: "Intro",
+    components: [
+      { component_type: "lecture", weekly_contact_hours: 2 },
+      {
+        component_type: "lab",
+        weekly_contact_hours: 1.5,
+        lab_kind: "computing",
+      },
+    ],
+  });
+  assert.equal(intro.status, 201);
+  assert.equal(intro.json.code, "ZZ 101");
+  assert.deepEqual(intro.json.component_types, ["lecture", "lab"]);
+  assert.equal(intro.json.weekly_contact_hours, 3.5);
+  const next = await create({ ...base, code: "ZZ 201", title: "Next" });
+
+  assert.equal(
+    (await create({ ...base, code: "zz 101", title: "Dup" })).json.error.code,
+    "COURSE_CODE_TAKEN",
+  );
+  assert.equal(
+    (
+      await create({
+        ...base,
+        code: "ZZ 301",
+        title: "Bad",
+        components: [
+          {
+            component_type: "lecture",
+            weekly_contact_hours: 2,
+            lab_kind: "computing",
+          },
+        ],
+      })
+    ).status,
+    400,
+  );
+
+  const edited = await call("PATCH", `/api/admin/courses/${next.json.id}`, {
+    cookie: adminCookie,
+    body: {
+      title: "Next course",
+      is_active: false,
+      components: [{ component_type: "lecture", weekly_contact_hours: 3 }],
+    },
+  });
+  assert.equal(edited.json.title, "Next course");
+  assert.equal(edited.json.status, "inactive");
+  assert.deepEqual(edited.json.component_types, ["lecture"]);
+  const otherBylaw = (
+    await pool.query("SELECT id FROM bylaw WHERE code = 'old_cs'")
+  ).rows[0].id;
+  assert.equal(
+    (
+      await call("PATCH", `/api/admin/courses/${next.json.id}`, {
+        cookie: adminCookie,
+        body: { bylaw_id: otherBylaw },
+      })
+    ).json.error.code,
+    "BYLAW_IMMUTABLE",
+  );
+
+  const addRule = (body) =>
+    call("POST", `/api/admin/courses/${next.json.id}/requisites`, {
+      cookie: adminCookie,
+      body: { source_reference: "Test fixture", ...body },
+    });
+  const rule = await addRule({
+    requisite_type: "course",
+    required_course_id: intro.json.id,
+  });
+  assert.equal(rule.status, 201);
+  assert.equal(rule.json.required_course.code, "ZZ 101");
+  const credits = await addRule({
+    requisite_type: "credits",
+    min_credits_passed: 60,
+    group_number: 2,
+  });
+  assert.equal(credits.json.min_credits_passed, 60);
+  const oldCourse = (
+    await pool.query("SELECT id FROM course WHERE bylaw_id = $1 LIMIT 1", [
+      otherBylaw,
+    ])
+  ).rows[0].id;
+  const crossBylaw = await addRule({
+    requisite_type: "course",
+    required_course_id: oldCourse,
+  });
+  assert.equal(crossBylaw.status, 400);
+  assert.equal(crossBylaw.json.error.details[0].code, "other_bylaw");
+  assert.equal((await addRule({ requisite_type: "course" })).status, 400);
+
+  const detail = await call("GET", `/api/admin/courses/${next.json.id}`, {
+    cookie: adminCookie,
+  });
+  assert.deepEqual(
+    detail.json.requisite_groups.map((g) => g.group_number),
+    [1, 2],
+  );
+  const removed = await call(
+    "DELETE",
+    `/api/admin/courses/${next.json.id}/requisites/${rule.json.id}`,
+    { cookie: adminCookie },
+  );
+  assert.equal(removed.status, 204);
+
+  const { rows: audit } = await pool.query(
+    "SELECT action FROM audit_event WHERE entity_label LIKE 'ZZ %' ORDER BY id",
+  );
+  assert.deepEqual(
+    audit.map((a) => a.action),
+    [
+      "course.created",
+      "course.created",
+      "course.updated",
+      "requisite.added",
+      "requisite.added",
+      "requisite.removed",
     ],
   );
 });

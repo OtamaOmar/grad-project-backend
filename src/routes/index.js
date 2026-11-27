@@ -12,6 +12,21 @@ import {
   signupSchema,
 } from "../controllers/auth.controller.js";
 import {
+  coursesQuerySchema,
+  createCourseSchema,
+  deleteRequisite,
+  getCourseById,
+  getCourses,
+  getCoursesSummary,
+  getRequisites,
+  patchCourse,
+  postCourse,
+  postRequisite,
+  requisiteSchema,
+  requisitesQuerySchema,
+  updateCourseSchema,
+} from "../controllers/adminCourses.controller.js";
+import {
   createTermSchema,
   getTermById,
   getTerms,
@@ -236,4 +251,41 @@ apiRouter.patch(
   ...admin,
   validate({ body: updateTermSchema }),
   patchTerm,
+);
+apiRouter.get("/admin/courses/summary", ...admin, getCoursesSummary);
+apiRouter.get(
+  "/admin/courses/requisites",
+  ...admin,
+  validate({ query: requisitesQuerySchema }),
+  getRequisites,
+);
+apiRouter.get(
+  "/admin/courses",
+  ...admin,
+  validate({ query: coursesQuerySchema }),
+  getCourses,
+);
+apiRouter.get("/admin/courses/:id", ...admin, getCourseById);
+apiRouter.post(
+  "/admin/courses",
+  ...admin,
+  validate({ body: createCourseSchema }),
+  postCourse,
+);
+apiRouter.patch(
+  "/admin/courses/:id",
+  ...admin,
+  validate({ body: updateCourseSchema }),
+  patchCourse,
+);
+apiRouter.post(
+  "/admin/courses/:id/requisites",
+  ...admin,
+  validate({ body: requisiteSchema }),
+  postRequisite,
+);
+apiRouter.delete(
+  "/admin/courses/:id/requisites/:requisiteId",
+  ...admin,
+  deleteRequisite,
 );
