@@ -38,6 +38,7 @@ SELECT
 FROM (VALUES
   ('old_cs', 'CS', 'media', 'Media', 'CS Old Bylaws.pdf, course tables, p.22 ("Media Informatics Track"); code chosen by the team'),
   ('old_cs', 'CS', 'big_data', 'Big Data', 'CS Old Bylaws.pdf, course tables, p.23 ("Big Data Track"); code chosen by the team'),
+  ('old_cs', 'CS', 'general', 'General', 'CS Old Bylaws.pdf, sample study plan, p.28 ("Year 4 Computer Science - General Track"); elective list, p.30 ("Electives - General Track"); code chosen by the team'),
   ('bylaw_2025', 'CS', 'data_engineering_analytics', 'Data Engineering and Analytics', 'CS New Bylaws - 25.pdf, Art. 36, p.22; code chosen by the team'),
   ('bylaw_2025', 'CS', 'media_informatics', 'Media Informatics', 'CS New Bylaws - 25.pdf, Art. 36, p.22; code chosen by the team'),
   ('bylaw_2025', 'CS', 'software_engineering', 'Software Engineering', 'CS New Bylaws - 25.pdf, Art. 36, p.22; code chosen by the team'),
@@ -89,3 +90,34 @@ ON CONFLICT (source_sheet) DO UPDATE SET
   math_path = EXCLUDED.math_path,
   source_reference = EXCLUDED.source_reference,
   updated_at = now();
+
+-- check: old_cs/CS has the media, big_data and general tracks, and the general track has no
+-- plan template and no elective pool yet (data gaps old_general_track_plan_template and
+-- old_general_track_elective_pool); remove that part when a template or pool is decided.
+DO $$
+DECLARE
+  old_track_count integer;
+  general_use_count integer;
+BEGIN
+  SELECT count(*) INTO old_track_count
+  FROM track t
+  JOIN program p ON p.id = t.program_id
+  JOIN bylaw b ON b.id = p.bylaw_id
+  WHERE b.code = 'old_cs' AND p.code = 'CS' AND t.code IN ('media', 'big_data', 'general');
+
+  SELECT
+    (SELECT count(*) FROM plan_template pt WHERE pt.track_id = t.id)
+    + (SELECT count(*) FROM elective_pool ep WHERE ep.track_id = t.id)
+  INTO general_use_count
+  FROM track t
+  JOIN program p ON p.id = t.program_id
+  JOIN bylaw b ON b.id = p.bylaw_id
+  WHERE b.code = 'old_cs' AND p.code = 'CS' AND t.code = 'general';
+
+  IF old_track_count <> 3 THEN
+    RAISE EXCEPTION 'Expected the 3 old_cs CS tracks (media, big_data, general), found %', old_track_count;
+  END IF;
+  IF general_use_count <> 0 THEN
+    RAISE EXCEPTION 'The old_cs general track has % plan templates or elective pools; expected none until the template is decided', general_use_count;
+  END IF;
+END $$;

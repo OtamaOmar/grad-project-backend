@@ -351,7 +351,7 @@ Designed names: old `CS`. New `CS`, `AI`, `BMD`, `CSEC`. Only old and new Comput
 | created_at | timestamptz | NO | NO | — | NO | now() | |
 | updated_at | timestamptz | NO | NO | — | NO | now() | |
 
-Old Computer Science tracks that the sheets actually use: Media, Big Data. The old bylaw also names a general Computer Science path. That name can be a track row. It has no plan template in the spreadsheet, so no slots are invented for it.
+Old Computer Science tracks that the sheets actually use: Media, Big Data. The old bylaw also names a General track (sample plan p.28, elective list p.30). It is seeded as a track row (`general`) only: it has no plan template in the spreadsheet, so no slots and no elective pool are invented for it (data gaps `old_general_track_plan_template` and `old_general_track_elective_pool`).
 
 2025 Computer Science tracks named in the bylaw, with no spreadsheet templates yet: Data Engineering and Analytics, Media Informatics, Software Engineering, Quantum Computing.
 
@@ -546,7 +546,7 @@ Cohort rule, applied when the file is loaded, not as a hard-coded check that emb
 
 For the ActiveStudentsAllProg extract (Omar, 2026-10-18/19) the cohort rule above is not used: `cohort_year` is the Year of the student's earliest semester in the file (Year, then SPRG < SUMMER < FALL), never the ID, and `bylaw_id` comes from the Curriculum (every student is `old_cs`; a `-25` Curriculum stops the load). See `docs/features/db-student-roster.md`.
 
-The student’s baseline template is not stored as a column. Once `track_id`, `english_path`, and `math_path` are known, it is the single `plan_template` matching `(bylaw_id, track_id, english_path, math_path)`, which that table’s unique constraint guarantees. While any of the three is null, the plan is unknown, and the rule engine does not guess one (Nile ask 2).
+The student’s baseline template is not stored as a column. Once `track_id`, `english_path`, and `math_path` are known, it is the `plan_template` matching `(bylaw_id, track_id, english_path, math_path)`; that table’s unique constraint guarantees at most one. While any of the three is null, or no template matches (for example the old `general` track, which has no template yet: data gap `old_general_track_plan_template`), the plan is unknown, and the rule engine does not guess one (Nile ask 2).
 
 Name, birthdate, and sign-in details from onboarding are not on this table. They are on `app_user` (§19), so the registration record stays exactly what the university file provides.
 

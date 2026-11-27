@@ -287,6 +287,34 @@ test("the 6 data gaps answered by the team decisions are resolved", async () => 
   assert.equal(open, 2);
 });
 
+test("old_cs general track: a track row only; template and pool wait for the gap", async () => {
+  const { rows } = await client.query(
+    `SELECT t.id, t.name, t.status FROM track t
+       JOIN program p ON p.id = t.program_id JOIN bylaw b ON b.id = p.bylaw_id
+      WHERE b.code = 'old_cs' AND p.code = 'CS' AND t.code = 'general'`,
+  );
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].name, "General");
+  assert.equal(rows[0].status, "active");
+  const used = (
+    await client.query(
+      `SELECT (SELECT count(*)::int FROM plan_template WHERE track_id = $1)
+            + (SELECT count(*)::int FROM elective_pool WHERE track_id = $1) AS n`,
+      [rows[0].id],
+    )
+  ).rows[0].n;
+  assert.equal(used, 0);
+  const { rows: gaps } = await client.query(
+    `SELECT category, status FROM data_gap
+      WHERE category IN ('old_general_track_elective_pool', 'old_general_track_plan_template')
+      ORDER BY category`,
+  );
+  assert.deepEqual(gaps, [
+    { category: "old_general_track_elective_pool", status: "open" },
+    { category: "old_general_track_plan_template", status: "open" },
+  ]);
+});
+
 for (const [name, expression] of [
   ["null credit minimum", "min_credits_passed=NULL"],
   ["negative credit minimum", "min_credits_passed=-1"],
