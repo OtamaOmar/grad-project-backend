@@ -33,6 +33,10 @@ import {
   updateBylawSchema,
 } from "../controllers/adminBylaws.controller.js";
 import {
+  createDataGapSchema,
+  patchDataGap,
+  postDataGap,
+  updateDataGapSchema,
   createCreditLimitSchema,
   deleteCreditLimit,
   patchCreditLimit,
@@ -180,6 +184,18 @@ apiRouter.get(
   getDataGaps,
 );
 apiRouter.get("/admin/data-gaps/:id", ...admin, getDataGapById);
+apiRouter.post(
+  "/admin/data-gaps",
+  ...admin,
+  validate({ body: createDataGapSchema }),
+  postDataGap,
+);
+apiRouter.patch(
+  "/admin/data-gaps/:id",
+  ...admin,
+  validate({ body: updateDataGapSchema }),
+  patchDataGap,
+);
 apiRouter.get("/admin/bylaws/summary", ...admin, getBylawsSummary);
 apiRouter.get(
   "/admin/bylaws",

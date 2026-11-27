@@ -1,26 +1,29 @@
 import { query } from "../config/db.js";
+import { AppError } from "../utils/AppError.js";
 import { orderBy } from "../utils/list.js";
+import { transaction } from "../utils/transaction.js";
+import { changes, recordAudit } from "./audit.service.js";
 
-// Admin "Data gaps" page: the data_gap register exactly as seeded.
-// Shapes match the frontend mock (src/mocks/handlers/admin/data-gaps.js), with two honest
-// differences: severity is always null (the register has no severity), and there are no
-// import issues (no import tables exist), so import_issue_count is null and a gap's
+// Admin "Data gaps" page: the data_gap register. Shapes match the frontend mock
+// (src/mocks/handlers/admin/data-gaps.js). severity is what an admin recorded (empty until
+// then). There are no import tables, so import_issue_count is null and a gap's
 // import_issues list is empty.
 
-// bylaw_scope is read from what each gap already states: an old_/new_ category, or the
-// source it cites (the old bylaw PDF or the old study-plan sheets mean old_cs; the 2025
-// bylaw PDF means bylaw_2025). A gap that cites neither gets an empty list (unknown).
+// bylaw_scope is what an admin recorded; until then it is read from what each gap already
+// states: an old_/new_ category, or the source it cites (the old bylaw PDF or the old
+// study-plan sheets mean old_cs; the 2025 bylaw PDF means bylaw_2025). A gap that cites
+// neither gets an empty list (unknown).
 const GAP_ROWS = `
   SELECT g.id::int AS id,
          'GAP-' || lpad(g.id::text, 3, '0') AS gap_code,
          g.category,
-         NULL::text AS severity,
+         g.severity,
          g.affected_entity,
          g.status,
          g.description,
          g.source_reference,
          g.notes,
-         array_remove(ARRAY[
+         COALESCE(g.bylaw_scope::text[], array_remove(ARRAY[
            CASE WHEN g.category LIKE 'old\\_%'
                   OR g.source_reference ILIKE '%Old Bylaws%'
                   OR g.source_reference ILIKE '%StudyPlan_Sep 24%'
@@ -28,7 +31,7 @@ const GAP_ROWS = `
            CASE WHEN g.category LIKE 'new\\_%'
                   OR g.source_reference ILIKE '%New Bylaws - 25%'
                 THEN 'bylaw_2025' END
-         ], NULL) AS bylaw_scope,
+         ], NULL)) AS bylaw_scope,
          NULL::int AS import_issue_count,
          g.created_at,
          g.updated_at
@@ -49,7 +52,7 @@ export const GAP_SORT_COLUMNS = {
 // bylaws that still have an open gap, and when the register last changed.
 export async function dataGapsSummary() {
   const { rows } = await query(
-    `SELECT category, status, bylaw_scope, updated_at FROM (${GAP_ROWS}) x`,
+    `SELECT category, status, severity, bylaw_scope, updated_at FROM (${GAP_ROWS}) x`,
   );
   const open = rows.filter((r) => r.status === "open");
   const categories = [...new Set(rows.map((r) => r.category))].sort();
@@ -57,7 +60,12 @@ export async function dataGapsSummary() {
     total: rows.length,
     open: open.length,
     resolved: rows.length - open.length,
-    open_by_severity: null,
+    open_by_severity: Object.fromEntries(
+      ["high", "medium", "low"].map((level) => [
+        level,
+        open.filter((r) => r.severity === level).length,
+      ]),
+    ),
     by_category: categories.map((category) => ({
       category,
       open: open.filter((r) => r.category === category).length,
@@ -125,4 +133,104 @@ export async function getDataGap(id) {
     id,
   ]);
   return rows[0] ? { ...rows[0], import_issues: [] } : null;
+}
+
+// The editable data_gap columns.
+const GAP_FIELDS = [
+  "category",
+  "description",
+  "affected_entity",
+  "status",
+  "severity",
+  "source_reference",
+  "notes",
+  "bylaw_scope",
+];
+
+// Records a new gap (status open). Audited; a high-severity gap is logged as a warning.
+export async function createDataGap(req, values) {
+  const id = await transaction(async (client) => {
+    const fields = GAP_FIELDS.filter(
+      (field) => field !== "status" && values[field] !== undefined,
+    );
+    const {
+      rows: [row],
+    } = await client.query(
+      `INSERT INTO data_gap (${fields.join(", ")})
+       VALUES (${fields.map((_, i) => `$${i + 1}`).join(", ")})
+       RETURNING id::int AS id`,
+      fields.map((field) => values[field]),
+    );
+    await recordAudit(
+      client,
+      req,
+      "data_gap.created",
+      { type: "data_gap", id: row.id, label: values.category },
+      values.description,
+      {
+        severity: values.severity === "high" ? "warning" : "info",
+        details: {
+          affected_entity: values.affected_entity,
+          source_reference: values.source_reference ?? null,
+        },
+      },
+    );
+    return row.id;
+  });
+  return getDataGap(id);
+}
+
+// Changes the fields sent. Resolving a gap needs notes: the confirmed decision and where
+// it was confirmed (the actual fix is a data change elsewhere). Audited as
+// data_gap.resolved when the status turns resolved.
+export async function updateDataGap(req, id, values) {
+  await transaction(async (client) => {
+    const {
+      rows: [before],
+    } = await client.query("SELECT * FROM data_gap WHERE id = $1 FOR UPDATE", [
+      id,
+    ]);
+    if (!before)
+      throw new AppError(404, "NOT_FOUND", "No data gap with this id.");
+    const notes = values.notes !== undefined ? values.notes : before.notes;
+    if (values.status === "resolved" && !notes) {
+      throw new AppError(
+        400,
+        "VALIDATION_FAILED",
+        "Resolving a gap needs notes: the confirmed decision and where it was confirmed.",
+        [
+          {
+            path: "notes",
+            message:
+              "Resolving a gap needs notes: the confirmed decision and where it was confirmed.",
+            code: "required_to_resolve",
+          },
+        ],
+      );
+    }
+    const fields = GAP_FIELDS.filter((field) => values[field] !== undefined);
+    if (fields.length === 0) return;
+    const {
+      rows: [after],
+    } = await client.query(
+      `UPDATE data_gap
+          SET ${fields.map((field, i) => `${field} = $${i + 2}`).join(", ")},
+              updated_at = now()
+        WHERE id = $1 RETURNING *`,
+      [id, ...fields.map((field) => values[field])],
+    );
+    const diff = changes(before, after, fields);
+    if (Object.keys(diff).length === 0) return;
+    const resolved =
+      before.status !== "resolved" && after.status === "resolved";
+    await recordAudit(
+      client,
+      req,
+      resolved ? "data_gap.resolved" : "data_gap.updated",
+      { type: "data_gap", id, label: before.category },
+      resolved ? `Resolved: ${after.notes}` : `Updated data gap ${id}.`,
+      { details: diff },
+    );
+  });
+  return getDataGap(id);
 }

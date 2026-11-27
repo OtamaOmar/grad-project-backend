@@ -9,10 +9,12 @@ import {
   updateCreditLimit,
 } from "../services/adminCreditLimits.service.js";
 import {
+  createDataGap,
   dataGapsSummary,
   GAP_SORT_COLUMNS,
   getDataGap,
   listDataGaps,
+  updateDataGap,
 } from "../services/adminDataGaps.service.js";
 import {
   createStaffUser,
@@ -229,4 +231,46 @@ export async function postCreditLimitOrder(req, res) {
   res.json(
     await reorderCreditLimits(req, req.body.bylaw_id, req.body.ordered_ids),
   );
+}
+
+const nullableText = (max) =>
+  z
+    .preprocess(
+      (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+      z.string().trim().max(max).nullable(),
+    )
+    .optional();
+const gapShape = {
+  category: z.string().trim().min(1).max(64),
+  description: z.string().trim().min(1).max(4000),
+  affected_entity: z.string().trim().min(1).max(64),
+  severity: z.enum(["high", "medium", "low"]).nullable().optional(),
+  source_reference: nullableText(2000),
+  notes: nullableText(4000),
+  bylaw_scope: z
+    .array(z.enum(["old_cs", "bylaw_2025"]))
+    .nullable()
+    .optional(),
+};
+
+// POST /api/admin/data-gaps: records a new open gap.
+export const createDataGapSchema = z.strictObject(gapShape);
+
+// PATCH /api/admin/data-gaps/:id: any field, plus the status.
+export const updateDataGapSchema = z.strictObject({
+  ...Object.fromEntries(
+    Object.entries(gapShape).map(([key, schema]) => [key, schema.optional()]),
+  ),
+  status: z.enum(["open", "resolved"]).optional(),
+});
+
+// POST /api/admin/data-gaps: 201 with the new gap.
+export async function postDataGap(req, res) {
+  res.status(201).json(await createDataGap(req, req.body));
+}
+
+// PATCH /api/admin/data-gaps/:id: changes the fields sent (resolving needs notes).
+export async function patchDataGap(req, res) {
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  res.json(await updateDataGap(req, id, req.body));
 }
