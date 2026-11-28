@@ -23,7 +23,7 @@ These team and doctor decisions replace older text in this document. Where a see
 | Old standing bands | Freshman 0-35, sophomore 36-70, junior 71-105, senior 106+ passed credits |
 | Senior projects `CSCI 495` / `CSCI 496` | 100 passed credits |
 | Internships `CSCI 490` / `COMM 401` | 67 passed credits (no senior standing) |
-| Track and paths | Inferred from course history: only Media electives `media`, only Big Data `big_data`, both `general`, none null. Null still means no sheet demand |
+| Track and paths | Inferred from course history: only Media electives `media`, only Big Data `big_data`, both `general`, none null. Null and `general` (a track row with no plan template yet, data gap `old_general_track_plan_template`) still mean no sheet demand |
 | Class sizes | Lecture 60 (75 on request), tutorial 30, computing lab 30, physics and circuits labs 15. No minimum to open |
 ## Whole system
 
@@ -55,7 +55,7 @@ Headcount is an unrounded sum of remaining `p` values. Implied section counts ar
 
 A spring run never reads the preceding fall’s grades. For a spring target the cutoff is the term before that fall. The service does not guess a cutoff.
 
-The response includes `forecast_run_id` and a count of students who contributed no sheet demand because `track_id`, `english_path`, or `math_path` is null. That count is only in the response. Persisting it would be a schema change for Backend A. No template is guessed (Nile ask 2).
+The response includes `forecast_run_id` and a count of students who contributed no sheet demand because no plan template matches them (`plan_template_id` is null in `forecast_students.sql`): `track_id`, `english_path`, or `math_path` is null, or the combination has no template (for example the old `general` track). That count is only in the response. Persisting it would be a schema change for Backend A. No template is guessed (Nile ask 2).
 
 ### What the engine reads
 
