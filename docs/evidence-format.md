@@ -23,7 +23,7 @@ These team and doctor decisions replace older text in this document. Where a see
 | Old standing bands | Freshman 0-35, sophomore 36-70, junior 71-105, senior 106+ passed credits |
 | Senior projects `CSCI 495` / `CSCI 496` | 100 passed credits |
 | Internships `CSCI 490` / `COMM 401` | 67 passed credits (no senior standing) |
-| Track and paths | Inferred from course history: only Media electives `media`, only Big Data `big_data`, both `general`, none null. Null and `general` (a track row with no plan template yet, data gap `old_general_track_plan_template`) still mean no sheet demand |
+| Track and paths | Inferred from course history: only Media electives `media`, only Big Data `big_data`, both `general`, none null. `general` uses the 4 General templates, copies of the Big Data sheets (team decision 2026-11-28, data gap `old_general_track_big_data_copy`); only null still means no sheet demand |
 | Class sizes | Lecture 60 (75 on request), tutorial 30, computing lab 30, physics and circuits labs 15. No minimum to open |
 ## Whole system
 

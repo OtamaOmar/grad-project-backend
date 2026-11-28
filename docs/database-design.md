@@ -78,7 +78,7 @@ One requirement of one target course. The requirement is another course, a stand
 ### D. Study plan template tables
 
 **`plan_template`**
-One official path: bylaw, program, track, English path, and math path. The eight spreadsheet sheets are eight **baseline plan templates** for Phase 1 planned demand. They are not Phase 2 **dynamic offering blocks**. These columns do not live on the student ID.
+One official path: bylaw, program, track, English path, and math path. The eight spreadsheet sheets are eight **baseline plan templates** for Phase 1 planned demand; four more, for the old General track, are copies of the Big Data sheets (team decision, Omar, 2026-11-28). They are not Phase 2 **dynamic offering blocks**. These columns do not live on the student ID.
 
 **`plan_slot`**
 One position in a template: year, fall or spring, and either one course or one elective pool.
@@ -351,7 +351,7 @@ Designed names: old `CS`. New `CS`, `AI`, `BMD`, `CSEC`. Only old and new Comput
 | created_at | timestamptz | NO | NO | — | NO | now() | |
 | updated_at | timestamptz | NO | NO | — | NO | now() | |
 
-Old Computer Science tracks that the sheets actually use: Media, Big Data. The old bylaw also names a General track (sample plan p.28, elective list p.30). It is seeded as a track row (`general`) only: it has no plan template in the spreadsheet, so no slots and no elective pool are invented for it (data gaps `old_general_track_plan_template` and `old_general_track_elective_pool`).
+Old Computer Science tracks that the sheets actually use: Media, Big Data. The old bylaw also names a General track (sample plan p.28, elective list p.30), seeded as `general`. The spreadsheet has no General sheet; by team decision (Omar, 2026-11-28) it has the pool "General track elective" (the 15 courses of pp.21-22 and p.30) and 4 plan templates copied from the Big Data sheets, with the 3 Big Data track boxes replaced by 4 general boxes (1 in Year 3 Spring, 3 in Year 4 Spring). That copy is a team choice, not a source: data gap `old_general_track_big_data_copy`.
 
 2025 Computer Science tracks named in the bylaw, with no spreadsheet templates yet: Data Engineering and Analytics, Media Informatics, Software Engineering, Quantum Computing.
 
@@ -437,10 +437,10 @@ A cell whose only value is `#N/A` produces no row.
 | id | bigint | NO | YES | — | YES | identity | |
 | bylaw_id | bigint | NO | NO | bylaw.id | NO | — | The templates in hand are the old bylaw |
 | program_id | bigint | NO | NO | program.id | NO | — | Computer Science |
-| track_id | bigint | NO | NO | track.id | NO | — | Media or Big Data for the eight sheets |
+| track_id | bigint | NO | NO | track.id | NO | — | Media or Big Data for the eight sheets; General for the 4 copies |
 | english_path | varchar(16) | NO | NO | — | NO | — | `intensive` or `english_1` |
 | math_path | varchar(16) | NO | NO | — | NO | — | `precalculus` or `calculus_1` |
-| source_sheet | varchar(64) | NO | NO | — | YES | — | Workbook sheet name |
+| source_sheet | varchar(64) | NO | NO | — | YES | — | Workbook sheet name, or a `*_General` name for the 4 General copies (not a workbook sheet) |
 | source_reference | text | NO | NO | — | NO | — | Workbook identity |
 | created_at | timestamptz | NO | NO | — | NO | now() | |
 | updated_at | timestamptz | NO | NO | — | NO | now() | |
@@ -459,6 +459,15 @@ The eight sheet names:
 | Math_Intensive_Bigdata | Big Data | intensive | calculus_1 |
 | Math_ENGL1_Media | Media | english_1 | calculus_1 |
 | Math_ENGL1_Bigdata | Big Data | english_1 | calculus_1 |
+
+The 4 General templates (no sheet; copies of the Big Data sheet of the same pair, team decision 2026-11-28):
+
+| source_sheet | track | english_path | math_path |
+|---|---|---|---|
+| Science_Intensive_General | General | intensive | precalculus |
+| Science_ENGL1_General | General | english_1 | precalculus |
+| Math_Intensive_General | General | intensive | calculus_1 |
+| Math_ENGL1_General | General | english_1 | calculus_1 |
 
 `Science_*` sheets start students in pre-calculus (`Math 100`). `Math_*` sheets start them in Calculus I. That naming is the workbook’s, and it is easy to misread. The `math_path` column is the explicit value.
 
@@ -546,7 +555,7 @@ Cohort rule, applied when the file is loaded, not as a hard-coded check that emb
 
 For the ActiveStudentsAllProg extract (Omar, 2026-10-18/19) the cohort rule above is not used: `cohort_year` is the Year of the student's earliest semester in the file (Year, then SPRG < SUMMER < FALL), never the ID, and `bylaw_id` comes from the Curriculum (every student is `old_cs`; a `-25` Curriculum stops the load). See `docs/features/db-student-roster.md`.
 
-The student’s baseline template is not stored as a column. Once `track_id`, `english_path`, and `math_path` are known, it is the `plan_template` matching `(bylaw_id, track_id, english_path, math_path)`; that table’s unique constraint guarantees at most one. While any of the three is null, or no template matches (for example the old `general` track, which has no template yet: data gap `old_general_track_plan_template`), the plan is unknown, and the rule engine does not guess one (Nile ask 2).
+The student’s baseline template is not stored as a column. Once `track_id`, `english_path`, and `math_path` are known, it is the `plan_template` matching `(bylaw_id, track_id, english_path, math_path)`; that table’s unique constraint guarantees at most one. While any of the three is null, or no template matches (for example a combination with no sheet), the plan is unknown, and the rule engine does not guess one (Nile ask 2).
 
 Name, birthdate, and sign-in details from onboarding are not on this table. They are on `app_user` (§19), so the registration record stays exactly what the university file provides.
 
@@ -1424,7 +1433,7 @@ These stay **design-only** until registration history and faculty rules exist:
 
 **3. Prerequisite layer.** What must already be true. Tables: `requisite`, with targets in `course`, `standing_band`, or `placement`. AND and OR are group numbers.
 
-**4. Plan template layer.** The official grids, eight of them on the old bylaw. Tables: `plan_template`, `plan_slot`, `elective_pool`, `elective_pool_course`. Connects to courses. Does not connect to a student yet.
+**4. Plan template layer.** The official grids, eight of them on the old bylaw, plus 4 General copies of the Big Data grids (team decision, 2026-11-28). Tables: `plan_template`, `plan_slot`, `elective_pool`, `elective_pool_course`. Connects to courses. Does not connect to a student yet.
 
 **5. Student record layer.** Empty until the registration file. Tables: `student`, `academic_term`, `enrollment`. A student points at one bylaw. An enrollment is one attempt.
 
@@ -1482,7 +1491,7 @@ The `is_incomplete` column follows from those counts. The same inputs and the sa
 | Bylaw / rules | bylaw, credit_limit, grade_scale, grade_scale_entry, standing_band, placement | Yes. Letter cut-points as transcribed in §3, re-checked against the PDFs at seed time. Old standing bands from Art. 24 (team decision, 2026-11-27). 2025 `placement` rows as in §3 | Rule sets |
 | Curriculum | program, track, course, course_component | Yes for names, old and new Computer Science courses, and 2025 contact hours. No old contact hours. No other programs’ courses | Catalog |
 | Prerequisites | requisite | Yes, hand-split from the sheets and the 2025 tables. No `#N/A` | Requirements |
-| Plan templates | plan_template, plan_slot, elective_pool, elective_pool_course | Yes for the eight old sheets, skipping ambiguous cells | Official paths |
+| Plan templates | plan_template, plan_slot, elective_pool, elective_pool_course | Yes for the eight old sheets, skipping ambiguous cells; the 4 General copies by team decision | Official paths |
 | Equivalence | course_equivalence | No. Stays empty | Unconfirmed pairs |
 | Student record | student, academic_term, enrollment | No. Stays empty | Future registration file |
 | Offering | offering_forecast, offering_decision | No. Stays empty | Future headcount, implied sections, and coordinator opening flags |

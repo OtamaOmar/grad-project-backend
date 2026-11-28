@@ -77,7 +77,11 @@ FROM (VALUES
   ('Math_Intensive_Media', 'media', 'intensive', 'calculus_1', 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Media'),
   ('Math_Intensive_Bigdata', 'big_data', 'intensive', 'calculus_1', 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata'),
   ('Math_ENGL1_Media', 'media', 'english_1', 'calculus_1', 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Media'),
-  ('Math_ENGL1_Bigdata', 'big_data', 'english_1', 'calculus_1', 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata')
+  ('Math_ENGL1_Bigdata', 'big_data', 'english_1', 'calculus_1', 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata'),
+  ('Science_Intensive_General', 'general', 'intensive', 'precalculus', 'No sheet: copy of CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, with its Big Data track boxes H32 (CSCI 461), H38 (CSCI 467) and H41 (technical elective) replaced by 4 general elective boxes (CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30), 1 in Year 3 Spring and 3 in Year 4 Spring: team decision (Omar, 2026-11-28)'),
+  ('Science_ENGL1_General', 'general', 'english_1', 'precalculus', 'No sheet: copy of CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, with its Big Data track boxes H30 (CSCI 461), H38 (CSCI 467) and H41 (technical elective) replaced by 4 general elective boxes (CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30), 1 in Year 3 Spring and 3 in Year 4 Spring: team decision (Omar, 2026-11-28)'),
+  ('Math_ENGL1_General', 'general', 'english_1', 'calculus_1', 'No sheet: copy of CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, with its Big Data track boxes H30 (CSCI 461), H38 (CSCI 467) and H41 (technical elective) replaced by 4 general elective boxes (CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30), 1 in Year 3 Spring and 3 in Year 4 Spring: team decision (Omar, 2026-11-28)'),
+  ('Math_Intensive_General', 'general', 'intensive', 'calculus_1', 'No sheet: copy of CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, with its Big Data track boxes H32 (CSCI 461), H38 (CSCI 467) and H41 (technical elective) replaced by 4 general elective boxes (CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30), 1 in Year 3 Spring and 3 in Year 4 Spring: team decision (Omar, 2026-11-28)')
 ) AS v (source_sheet, track_code, english_path, math_path, source_reference)
 JOIN bylaw b ON b.code = 'old_cs'
 JOIN program p ON p.bylaw_id = b.id AND p.code = 'CS'
@@ -91,13 +95,15 @@ ON CONFLICT (source_sheet) DO UPDATE SET
   source_reference = EXCLUDED.source_reference,
   updated_at = now();
 
--- check: old_cs/CS has the media, big_data and general tracks, and the general track has no
--- plan template and no elective pool yet (data gaps old_general_track_plan_template and
--- old_general_track_elective_pool); remove that part when a template or pool is decided.
+-- check: old_cs/CS has the media, big_data and general tracks; old_cs has 12 plan templates
+-- (8 sheets + 4 general copies, team decision 2026-11-28), and the general track has 4 of them,
+-- one per english/math pair. Its elective pool is checked in 010 (it runs after this file).
 DO $$
 DECLARE
   old_track_count integer;
-  general_use_count integer;
+  old_template_count integer;
+  general_template_count integer;
+  general_pair_count integer;
 BEGIN
   SELECT count(*) INTO old_track_count
   FROM track t
@@ -105,11 +111,15 @@ BEGIN
   JOIN bylaw b ON b.id = p.bylaw_id
   WHERE b.code = 'old_cs' AND p.code = 'CS' AND t.code IN ('media', 'big_data', 'general');
 
-  SELECT
-    (SELECT count(*) FROM plan_template pt WHERE pt.track_id = t.id)
-    + (SELECT count(*) FROM elective_pool ep WHERE ep.track_id = t.id)
-  INTO general_use_count
-  FROM track t
+  SELECT count(*) INTO old_template_count
+  FROM plan_template pt
+  JOIN bylaw b ON b.id = pt.bylaw_id
+  WHERE b.code = 'old_cs';
+
+  SELECT count(*), count(DISTINCT (pt.english_path, pt.math_path))
+  INTO general_template_count, general_pair_count
+  FROM plan_template pt
+  JOIN track t ON t.id = pt.track_id
   JOIN program p ON p.id = t.program_id
   JOIN bylaw b ON b.id = p.bylaw_id
   WHERE b.code = 'old_cs' AND p.code = 'CS' AND t.code = 'general';
@@ -117,7 +127,11 @@ BEGIN
   IF old_track_count <> 3 THEN
     RAISE EXCEPTION 'Expected the 3 old_cs CS tracks (media, big_data, general), found %', old_track_count;
   END IF;
-  IF general_use_count <> 0 THEN
-    RAISE EXCEPTION 'The old_cs general track has % plan templates or elective pools; expected none until the template is decided', general_use_count;
+  IF old_template_count <> 12 THEN
+    RAISE EXCEPTION 'Expected 12 old_cs plan templates (8 sheets, 4 general), found %', old_template_count;
+  END IF;
+  IF general_template_count <> 4 OR general_pair_count <> 4 THEN
+    RAISE EXCEPTION 'Expected 4 general plan templates, one per english/math pair, found % templates and % pairs',
+      general_template_count, general_pair_count;
   END IF;
 END $$;

@@ -287,7 +287,80 @@ test("the 6 data gaps answered by the team decisions are resolved", async () => 
   assert.equal(open, 2);
 });
 
-test("old_cs general track: a track row only; template and pool wait for the gap", async () => {
+// The 4 general templates (team decision, Omar, 2026-11-28): the Big Data sheet of each pair with
+// CSCI 461 (Year 3 Spring), CSCI 467 and the technical elective (Year 4 Spring #1, #4) replaced by
+// general boxes, plus a 4th box in Year 4 Spring after the sheet's last printed "#".
+const GENERAL_TEMPLATES = [
+  {
+    sheet: "Science_Intensive_General",
+    bigData: "Science_Intensive_bigdata",
+    english: "intensive",
+    math: "precalculus",
+    slots: 47,
+    y3Box: 6,
+    box4: 8,
+    y4Fall: 17,
+    y4Spring: 19,
+  },
+  {
+    sheet: "Science_ENGL1_General",
+    bigData: "Science_ENGL1_Bigdata",
+    english: "english_1",
+    math: "precalculus",
+    slots: 46,
+    y3Box: 4,
+    box4: 7,
+    y4Fall: 14,
+    y4Spring: 16,
+  },
+  {
+    sheet: "Math_ENGL1_General",
+    bigData: "Math_ENGL1_Bigdata",
+    english: "english_1",
+    math: "calculus_1",
+    slots: 45,
+    y3Box: 4,
+    box4: 7,
+    y4Fall: 14,
+    y4Spring: 16,
+  },
+  {
+    sheet: "Math_Intensive_General",
+    bigData: "Math_Intensive_Bigdata",
+    english: "intensive",
+    math: "calculus_1",
+    slots: 46,
+    y3Box: 6,
+    box4: 8,
+    y4Fall: 17,
+    y4Spring: 19,
+  },
+];
+
+// One template's slots as "year|term|position|content" (content = course code or pool name),
+// with the slot's stored credits (course credits, or 3 for a pool whose members all have 3).
+async function templateBoxes(sheet) {
+  const { rows } = await client.query(
+    `SELECT ps.study_year, ps.term_type, ps.position,
+            coalesce(c.code, ep.name) AS content,
+            coalesce(c.credits, (SELECT CASE WHEN min(mc.credits) = max(mc.credits)
+                                             THEN min(mc.credits) * ep.choose_count END
+                                   FROM elective_pool_course epc JOIN course mc ON mc.id = epc.course_id
+                                  WHERE epc.elective_pool_id = ep.id))::int AS credits
+       FROM plan_slot ps JOIN plan_template pt ON pt.id = ps.plan_template_id
+       LEFT JOIN course c ON c.id = ps.course_id
+       LEFT JOIN elective_pool ep ON ep.id = ps.elective_pool_id
+      WHERE pt.source_sheet = $1`,
+    [sheet],
+  );
+  return rows.map((r) => ({
+    key: `${r.study_year}|${r.term_type}|${r.position}|${r.content}`,
+    term: `${r.study_year}|${r.term_type}`,
+    credits: r.credits,
+  }));
+}
+
+test("old_cs general track: pool and 4 templates copied from the Big Data sheets (team decision 2026-11-28)", async () => {
   const { rows } = await client.query(
     `SELECT t.id, t.name, t.status FROM track t
        JOIN program p ON p.id = t.program_id JOIN bylaw b ON b.id = p.bylaw_id
@@ -296,22 +369,100 @@ test("old_cs general track: a track row only; template and pool wait for the gap
   assert.equal(rows.length, 1);
   assert.equal(rows[0].name, "General");
   assert.equal(rows[0].status, "active");
-  const used = (
-    await client.query(
-      `SELECT (SELECT count(*)::int FROM plan_template WHERE track_id = $1)
-            + (SELECT count(*)::int FROM elective_pool WHERE track_id = $1) AS n`,
-      [rows[0].id],
-    )
-  ).rows[0].n;
-  assert.equal(used, 0);
+  const trackId = rows[0].id;
+
+  const { rows: pools } = await client.query(
+    `SELECT ep.id, ep.choose_count,
+            array_agg(c.code ORDER BY c.code) AS codes,
+            array_agg(DISTINCT c.credits) AS credits
+       FROM elective_pool ep JOIN bylaw b ON b.id = ep.bylaw_id
+       JOIN elective_pool_course epc ON epc.elective_pool_id = ep.id
+       JOIN course c ON c.id = epc.course_id
+      WHERE b.code = 'old_cs' AND ep.track_id = $1
+      GROUP BY ep.id, ep.name, ep.choose_count`,
+    [trackId],
+  );
+  assert.equal(pools.length, 1);
+  assert.equal(pools[0].choose_count, 1);
+  assert.deepEqual(
+    pools[0].codes,
+    [
+      451, 452, 455, 456, 457, 458, 461, 462, 464, 465, 467, 471, 472, 475, 479,
+    ].map((n) => `CSCI ${n}`),
+  );
+  assert.deepEqual(pools[0].credits, [3]);
+
+  const { rows: templates } = await client.query(
+    `SELECT source_sheet, english_path, math_path FROM plan_template
+      WHERE track_id = $1 ORDER BY source_sheet`,
+    [trackId],
+  );
+  const bySheet = (a, b) => (a.source_sheet < b.source_sheet ? -1 : 1);
+  assert.deepEqual(
+    templates.sort(bySheet),
+    GENERAL_TEMPLATES.map((t) => ({
+      source_sheet: t.sheet,
+      english_path: t.english,
+      math_path: t.math,
+    })).sort(bySheet),
+  );
+
+  for (const t of GENERAL_TEMPLATES) {
+    const general = await templateBoxes(t.sheet);
+    const bigData = await templateBoxes(t.bigData);
+    assert.equal(general.length, t.slots, t.sheet);
+    const generalKeys = new Set(general.map((b) => b.key));
+    const bigDataKeys = new Set(bigData.map((b) => b.key));
+    assert.deepEqual(
+      bigData
+        .filter((b) => !generalKeys.has(b.key))
+        .map((b) => b.key)
+        .sort(),
+      [
+        `3|spring|${t.y3Box}|CSCI 461`,
+        "4|spring|1|CSCI 467",
+        "4|spring|4|Big Data track technical elective",
+      ].sort(),
+      t.sheet,
+    );
+    assert.deepEqual(
+      general
+        .filter((b) => !bigDataKeys.has(b.key))
+        .map((b) => b.key)
+        .sort(),
+      [
+        `3|spring|${t.y3Box}|General track elective`,
+        "4|spring|1|General track elective",
+        "4|spring|4|General track elective",
+        `4|spring|${t.box4}|General track elective`,
+      ].sort(),
+      t.sheet,
+    );
+    // Stored slot credits (no slot for the "XXXX XXX" gen-ed box).
+    const termCredits = (term) =>
+      general
+        .filter((b) => b.term === term)
+        .reduce((sum, b) => sum + b.credits, 0);
+    assert.equal(termCredits("3|spring"), 18, t.sheet);
+    assert.equal(termCredits("4|fall"), t.y4Fall, t.sheet);
+    assert.equal(termCredits("4|spring"), t.y4Spring, t.sheet);
+    assert.equal(
+      general.reduce((sum, b) => sum + b.credits, 0),
+      135,
+      t.sheet,
+    );
+  }
+
   const { rows: gaps } = await client.query(
     `SELECT category, status FROM data_gap
-      WHERE category IN ('old_general_track_elective_pool', 'old_general_track_plan_template')
+      WHERE category IN ('old_general_track_elective_pool', 'old_general_track_plan_template',
+                         'old_general_track_big_data_copy')
       ORDER BY category`,
   );
   assert.deepEqual(gaps, [
-    { category: "old_general_track_elective_pool", status: "open" },
-    { category: "old_general_track_plan_template", status: "open" },
+    { category: "old_general_track_big_data_copy", status: "open" },
+    { category: "old_general_track_elective_pool", status: "resolved" },
+    { category: "old_general_track_plan_template", status: "resolved" },
   ]);
 });
 

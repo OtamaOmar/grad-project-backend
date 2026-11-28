@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { after, before, test } from "node:test";
 import pg from "pg";
 import { auditReferenceData } from "./reference-data-audit.js";
@@ -164,4 +165,115 @@ test("reports students without a matching plan without exposing their identities
       assert.ok(warnings.every((s) => !s.includes("TEST_DATA_AUDIT_STUDENT")));
     },
   );
+});
+
+// The old_cs general track (team decision, Omar, 2026-11-28): pool "General track elective",
+// 4 boxes in each of the 4 general templates copied from the Big Data sheets.
+const GENERAL = [
+  ["Science_Intensive_General", "intensive", "precalculus"],
+  ["Science_ENGL1_General", "english_1", "precalculus"],
+  ["Math_ENGL1_General", "english_1", "calculus_1"],
+  ["Math_Intensive_General", "intensive", "calculus_1"],
+];
+
+test("general track courses count as placed through the general pool", async () => {
+  const result = await auditReferenceData(client);
+  assert.deepEqual(result.errors, []);
+  for (const code of ["CSCI 471", "CSCI 472", "CSCI 475", "CSCI 479"]) {
+    assert.ok(!result.warnings.some((s) => s.includes(code)), code);
+  }
+});
+
+test("detects the general pool without plan slots", async () => {
+  await withDamage(
+    `DELETE FROM plan_slot WHERE elective_pool_id=(
+    SELECT ep.id FROM elective_pool ep JOIN bylaw b ON b.id=ep.bylaw_id
+    WHERE b.code='old_cs' AND ep.name='General track elective')`,
+    ({ errors }) => {
+      assert.ok(
+        errors.includes(
+          "old_cs: General track elective: invalid per-box count, no members, or no plan slot",
+        ),
+      );
+      assert.ok(
+        errors.includes(
+          "old_cs: CSCI 471 unexpectedly has no plan placement (direct or elective)",
+        ),
+      );
+    },
+  );
+});
+
+test("detects a missing general template", async () => {
+  await withDamage(
+    `DELETE FROM plan_slot WHERE plan_template_id=(
+    SELECT id FROM plan_template WHERE source_sheet='Math_Intensive_General');
+    DELETE FROM plan_template WHERE source_sheet='Math_Intensive_General'`,
+    ({ errors }) => {
+      assert.ok(
+        errors.includes("Missing plan template: Math_Intensive_General"),
+      );
+    },
+  );
+});
+
+test("detects the 12 general credits misread as one box choosing 4", async () => {
+  await withDamage(
+    `UPDATE elective_pool SET choose_count=4 WHERE name='General track elective'`,
+    ({ errors }) => {
+      assert.ok(
+        errors.some(
+          (s) =>
+            s.includes("General track elective") &&
+            s.includes("invalid per-box count"),
+        ),
+      );
+    },
+  );
+});
+
+test("a general student matches a general template in forecast_students.sql", async () => {
+  const forecastStudents = await readFile(
+    new URL("../db/queries/forecast_students.sql", import.meta.url),
+    "utf8",
+  );
+  const unmatched = ({ warnings }) =>
+    Number(
+      warnings
+        .map((s) => s.match(/^(\d+) CS students have no matching plan/))
+        .find(Boolean)?.[1] ?? 0,
+    );
+  await client.query("BEGIN");
+  try {
+    const unmatchedBefore = unmatched(await auditReferenceData(client));
+    for (const [, english, math] of GENERAL) {
+      await client.query(
+        `INSERT INTO student (university_id, cohort_year, bylaw_id, program_id, track_id, english_path, math_path)
+         SELECT $1, 2098, b.id, p.id, t.id, $2, $3 FROM bylaw b
+         JOIN program p ON p.bylaw_id=b.id AND p.code='CS'
+         JOIN track t ON t.program_id=p.id AND t.code='general'
+         WHERE b.code='old_cs'`,
+        [`TEST_GEN_${english}_${math}`, english, math],
+      );
+    }
+    const { rows } = await client.query(forecastStudents);
+    const { rows: templates } = await client.query(
+      "SELECT id, source_sheet FROM plan_template WHERE source_sheet = ANY($1)",
+      [GENERAL.map(([sheet]) => sheet)],
+    );
+    for (const [sheet, english, math] of GENERAL) {
+      const student = rows.find(
+        (r) => r.university_id === `TEST_GEN_${english}_${math}`,
+      );
+      assert.ok(student, sheet);
+      assert.equal(
+        student.plan_template_id,
+        templates.find((t) => t.source_sheet === sheet).id,
+        sheet,
+      );
+    }
+    assert.equal(unmatched(await auditReferenceData(client)), unmatchedBefore);
+  } finally {
+    await client.query("ROLLBACK");
+  }
 });

@@ -2,6 +2,11 @@
 -- One row per filled box: a course of the old bylaw, or the track's Technical Elective pool. The 8 "XXXX XXX"
 -- gen-ed boxes get no slot (no pool for them, data gap old_gen_ed_elective_pool). Position = the printed "#",
 -- or the box's order in its term where no "#" is printed. Upsert on the slot's UNIQUE key.
+-- Then the 4 general templates (team decision, Omar, 2026-11-28; data gap old_general_track_big_data_copy):
+-- each is the Big Data sheet of its english/math pair, slot by slot, with CSCI 461 (Year 3 Spring), CSCI 467
+-- (Year 4 Spring #1) and the Big Data technical elective (Year 4 Spring #4) replaced by the "General track
+-- elective" pool, plus a 4th general box in Year 4 Spring after the sheet's last printed "#" (8 on the
+-- Intensive sheets, 7 on the ENGL1 sheets). Their "XXXX XXX" box gets no slot either.
 INSERT INTO plan_slot (
   plan_template_id,
   study_year,
@@ -381,7 +386,191 @@ FROM (VALUES
   ('Math_Intensive_Bigdata', 4, 'spring', 3, 'CSCI 496', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H40'),
   ('Math_Intensive_Bigdata', 4, 'spring', 4, NULL, 'Big Data track technical elective', 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H41'),
   ('Math_Intensive_Bigdata', 4, 'spring', 5, 'SSCI 105', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H42'),
-  ('Math_Intensive_Bigdata', 4, 'spring', 7, 'NSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H44')
+  ('Math_Intensive_Bigdata', 4, 'spring', 7, 'NSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H44'),
+  ('Science_Intensive_General', 1, 'fall', 1, 'CSCI 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B5 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 1, 'fall', 2, 'ENGL 001', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B6 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 1, 'fall', 3, 'MATH 100', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B7 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 1, 'fall', 4, 'CSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B8 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'fall', 1, 'ECEN 101C', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B16 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'fall', 2, 'MATH 112', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B17 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'fall', 3, 'ENGL 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B18 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'fall', 4, 'MATH 201', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B19 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'fall', 5, 'CSCI 207', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B20 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'fall', 6, 'MATH 211', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B21 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'fall', 1, 'CSCI 311', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B27 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'fall', 2, 'CSCI 313', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B28 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'fall', 3, 'CSCI 322', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B29 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'fall', 4, 'ENGL 202', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B30 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'fall', 5, 'MATH 301', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B31 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'fall', 6, 'HUMA 103', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B32 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'fall', 1, 'COMM 401', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B38 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'fall', 2, 'CSCI 417', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B39 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'fall', 3, 'CSCI 495', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B40 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'fall', 4, 'CSCI 415', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B41 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'fall', 5, 'SSCI 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B42 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'fall', 6, 'SSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, B43 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 1, 'spring', 1, 'MATH 111', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H5 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 1, 'spring', 2, 'PHYS 101C', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H6 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 1, 'spring', 3, 'ENGL 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H7 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 1, 'spring', 4, 'CSCI 112', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H8 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 1, 'spring', 5, 'CSCI 205', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H9 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 1, 'spring', 6, 'HUMA 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H10 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'spring', 1, 'MATH 210', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H16 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'spring', 2, 'CSCI 221', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H17 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'spring', 3, 'CSCI 208', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H18 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'spring', 4, 'ENGL 201', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H19 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'spring', 5, 'MATH 203', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H20 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 2, 'spring', 6, 'HUMA 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H21 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'spring', 1, 'CSCI 315', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H27 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'spring', 2, 'CSCI 305', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H28 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'spring', 3, 'CSCI 419', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H29 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'spring', 4, 'CSCI 217', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H30 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'spring', 5, 'CSCI 463', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H31 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 3, 'spring', 6, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H32 (CSCI 461); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Science_Intensive_General', 4, 'spring', 1, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H38 (CSCI 467); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Science_Intensive_General', 4, 'spring', 2, 'CSCI 490', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H39 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'spring', 3, 'CSCI 496', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H40 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'spring', 4, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H41 (Big Data track technical elective); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Science_Intensive_General', 4, 'spring', 5, 'SSCI 105', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H42 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'spring', 7, 'NSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H44 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_Intensive_General', 4, 'spring', 8, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box added after the last printed box of CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_bigdata, H44 (Year 4 Spring); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Science_ENGL1_General', 1, 'fall', 1, 'CSCI 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B5 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'fall', 2, 'CSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B6 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'fall', 3, 'ENGL 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B7 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'fall', 4, 'HUMA 103', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B8 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'fall', 5, 'MATH 100', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B9 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'fall', 6, 'HUMA 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B10 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'fall', 1, 'ECEN 101C', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B16 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'fall', 2, 'CSCI 207', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B17 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'fall', 3, 'ENGL 201', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B18 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'fall', 4, 'MATH 201', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B19 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'fall', 5, 'MATH 112', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B20 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'fall', 6, 'MATH 211', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B21 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'fall', 1, 'CSCI 311', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B27 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'fall', 2, 'CSCI 313', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B28 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'fall', 3, 'CSCI 322', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B29 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'fall', 4, 'NSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B30 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'fall', 5, 'MATH 301', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B31 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'fall', 6, 'MATH 210', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B32 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 4, 'fall', 1, 'COMM 401', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B38 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 4, 'fall', 2, 'CSCI 417', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B39 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 4, 'fall', 3, 'CSCI 495', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B40 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 4, 'fall', 4, 'CSCI 415', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B41 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 4, 'fall', 5, 'SSCI 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, B42 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'spring', 1, 'CSCI 112', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H5 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'spring', 2, 'PHYS 101C', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H6 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'spring', 3, 'ENGL 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H7 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'spring', 4, 'CSCI 205', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H8 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'spring', 5, 'HUMA 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H9 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 1, 'spring', 6, 'MATH 111', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H10 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'spring', 1, 'CSCI 217', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H16 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'spring', 2, 'CSCI 221', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H17 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'spring', 3, 'CSCI 208', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H18 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'spring', 4, 'ENGL 202', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H19 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 2, 'spring', 5, 'MATH 203', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H20 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'spring', 1, 'CSCI 315', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H27 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'spring', 2, 'CSCI 305', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H28 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'spring', 3, 'CSCI 419', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H29 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'spring', 4, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H30 (CSCI 461); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Science_ENGL1_General', 3, 'spring', 5, 'CSCI 463', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H31 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 3, 'spring', 6, 'SSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H32 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 4, 'spring', 1, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H38 (CSCI 467); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Science_ENGL1_General', 4, 'spring', 2, 'CSCI 490', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H39 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 4, 'spring', 3, 'CSCI 496', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H40 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 4, 'spring', 4, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H41 (Big Data track technical elective); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Science_ENGL1_General', 4, 'spring', 5, 'SSCI 105', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, H42 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Science_ENGL1_General', 4, 'spring', 7, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box added after the last printed box of CS-StudyPlan_Sep 24.xlsx, sheet Science_ENGL1_Bigdata, G43 (Year 4 Spring); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Math_ENGL1_General', 1, 'fall', 1, 'CSCI 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B5 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'fall', 2, 'CSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B6 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'fall', 3, 'ENGL 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B7 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'fall', 4, 'HUMA 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B8 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'fall', 5, 'MATH 111', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B9 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'fall', 6, 'PHYS 101C', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B10 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'fall', 1, 'HUMA 103', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B16 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'fall', 2, 'CSCI 207', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B17 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'fall', 3, 'ENGL 201', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B18 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'fall', 4, 'MATH 201', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B19 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'fall', 5, 'MATH 210', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B20 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'fall', 6, 'MATH 211', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B21 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'fall', 1, 'CSCI 311', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B27 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'fall', 2, 'CSCI 313', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B28 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'fall', 3, 'CSCI 322', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B29 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'fall', 4, 'NSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B30 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'fall', 5, 'MATH 301', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B31 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 4, 'fall', 1, 'COMM 401', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B38 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 4, 'fall', 2, 'CSCI 417', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B39 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 4, 'fall', 3, 'CSCI 495', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B40 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 4, 'fall', 4, 'CSCI 415', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B41 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 4, 'fall', 5, 'SSCI 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, B42 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'spring', 1, 'CSCI 112', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H5 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'spring', 2, 'ECEN 101C', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H6 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'spring', 3, 'ENGL 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H7 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'spring', 4, 'CSCI 205', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H8 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'spring', 5, 'HUMA 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H9 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 1, 'spring', 6, 'MATH 112', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H10 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'spring', 1, 'CSCI 217', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H16 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'spring', 2, 'CSCI 221', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H17 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'spring', 3, 'CSCI 208', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H18 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'spring', 4, 'ENGL 202', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H19 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 2, 'spring', 5, 'MATH 203', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H20 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'spring', 1, 'CSCI 315', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H27 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'spring', 2, 'CSCI 305', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H28 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'spring', 3, 'CSCI 419', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H29 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'spring', 4, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H30 (CSCI 461); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Math_ENGL1_General', 3, 'spring', 5, 'CSCI 463', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H31 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 3, 'spring', 6, 'SSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H32 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 4, 'spring', 1, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H38 (CSCI 467); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Math_ENGL1_General', 4, 'spring', 2, 'CSCI 490', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H39 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 4, 'spring', 3, 'CSCI 496', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H40 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 4, 'spring', 4, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H41 (Big Data track technical elective); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Math_ENGL1_General', 4, 'spring', 5, 'SSCI 105', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, H42 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_ENGL1_General', 4, 'spring', 7, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box added after the last printed box of CS-StudyPlan_Sep 24.xlsx, sheet Math_ENGL1_Bigdata, G43 (Year 4 Spring); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Math_Intensive_General', 1, 'fall', 1, 'CSCI 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B5 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 1, 'fall', 2, 'CSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B6 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 1, 'fall', 3, 'ENGL 001', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B7 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 1, 'fall', 4, 'MATH 111', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B8 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'fall', 1, 'ECEN 101C', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B16 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'fall', 2, 'CSCI 207', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B17 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'fall', 3, 'ENGL 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B18 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'fall', 4, 'MATH 201', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B19 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'fall', 5, 'CSCI 205', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B20 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'fall', 6, 'MATH 211', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B21 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'fall', 1, 'CSCI 311', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B27 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'fall', 2, 'CSCI 313', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B28 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'fall', 3, 'CSCI 322', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B29 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'fall', 4, 'ENGL 202', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B30 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'fall', 5, 'MATH 301', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B31 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'fall', 6, 'HUMA 103', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B32 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'fall', 1, 'COMM 401', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B38 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'fall', 2, 'CSCI 417', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B39 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'fall', 3, 'CSCI 495', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B40 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'fall', 4, 'CSCI 415', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B41 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'fall', 5, 'SSCI 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B42 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'fall', 6, 'SSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, B43 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 1, 'spring', 1, 'CSCI 112', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H5 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 1, 'spring', 2, 'PHYS 101C', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H6 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 1, 'spring', 3, 'ENGL 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H7 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 1, 'spring', 4, 'MATH 112', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H8 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 1, 'spring', 5, 'HUMA 101', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H9 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 1, 'spring', 6, 'HUMA 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H10 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'spring', 1, 'MATH 210', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H16 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'spring', 2, 'CSCI 221', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H17 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'spring', 3, 'CSCI 208', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H18 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'spring', 4, 'ENGL 201', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H19 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 2, 'spring', 5, 'MATH 203', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H20 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'spring', 1, 'CSCI 315', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H27 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'spring', 2, 'CSCI 305', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H28 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'spring', 3, 'CSCI 419', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H29 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'spring', 4, 'CSCI 217', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H30 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'spring', 5, 'CSCI 463', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H31 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 3, 'spring', 6, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H32 (CSCI 461); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Math_Intensive_General', 4, 'spring', 1, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H38 (CSCI 467); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Math_Intensive_General', 4, 'spring', 2, 'CSCI 490', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H39 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'spring', 3, 'CSCI 496', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H40 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'spring', 4, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box in place of CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H41 (Big Data track technical elective); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)'),
+  ('Math_Intensive_General', 4, 'spring', 5, 'SSCI 105', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H42 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'spring', 7, 'NSCI 102', NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H44 (copied to the general plan: team decision (Omar, 2026-11-28))'),
+  ('Math_Intensive_General', 4, 'spring', 8, NULL, 'General track elective', 'CS Old Bylaws.pdf, course tables, pp.21-22; elective list, p.30; general elective box added after the last printed box of CS-StudyPlan_Sep 24.xlsx, sheet Math_Intensive_Bigdata, H44 (Year 4 Spring); 1 general box in Year 3 Spring and 3 in Year 4 Spring, not 2 in Semester 7 and 2 in Semester 8 as on the sample study plan p.28, to keep Year 4 Fall within the credit cap: team decision (Omar, 2026-11-28)')
 ) AS v (source_sheet, study_year, term_type, position, course_code, pool_name, source_reference)
 JOIN plan_template pt ON pt.source_sheet = v.source_sheet
 LEFT JOIN course c ON c.bylaw_id = pt.bylaw_id AND c.code = v.course_code
@@ -394,9 +583,12 @@ ON CONFLICT (plan_template_id, study_year, term_type, position) DO UPDATE SET
   source_reference = EXCLUDED.source_reference,
   updated_at = now();
 
--- check: 362 slots (354 course, 8 pool) in the 8 old templates, the count of each template,
--- CSCI 207 -> CSCI 112, Science_Intensive_bigdata year 2 fall = 19 credits including ECEN 101C, and every term's
--- course credits + printed credits of its elective boxes = the printed term total
+-- check: 546 slots (522 course, 24 pool) in the 12 old templates (8 sheets: 362 = 354 course + 8 pool; 4 general:
+-- 184 = 168 course + 16 pool), the count of each template, CSCI 207 -> CSCI 112, Science_Intensive_bigdata year 2
+-- fall = 19 credits including ECEN 101C, every term's course credits + credits of its elective boxes = the printed
+-- term total (general templates: the Big Data total with the general boxes; elective and "XXXX XXX" boxes 3 each),
+-- and each general template = its Big Data template minus CSCI 461, CSCI 467 and the technical elective, plus
+-- 4 "General track elective" boxes
 DO $$
 DECLARE
   total_count integer;
@@ -407,6 +599,7 @@ DECLARE
   y2_credits integer;
   y2_ecen integer;
   bad_term_count integer;
+  bad_copy_count integer;
 BEGIN
   SELECT count(*), count(ps.course_id), count(ps.elective_pool_id)
   INTO total_count, course_count, pool_count
@@ -424,7 +617,11 @@ BEGIN
     ('Math_ENGL1_Media', 45),
     ('Math_ENGL1_Bigdata', 44),
     ('Math_Intensive_Media', 45),
-    ('Math_Intensive_Bigdata', 45)
+    ('Math_Intensive_Bigdata', 45),
+    ('Science_Intensive_General', 47),
+    ('Science_ENGL1_General', 46),
+    ('Math_ENGL1_General', 45),
+    ('Math_Intensive_General', 46)
   ) AS e (source_sheet, slot_count)
   WHERE e.slot_count <> (
     SELECT count(*) FROM plan_slot ps
@@ -511,7 +708,39 @@ BEGIN
     ('Math_Intensive_Bigdata', 3, 'fall', 19, 0),
     ('Math_Intensive_Bigdata', 3, 'spring', 18, 0),
     ('Math_Intensive_Bigdata', 4, 'fall', 17, 0),
-    ('Math_Intensive_Bigdata', 4, 'spring', 19, 6)
+    ('Math_Intensive_Bigdata', 4, 'spring', 19, 6),
+    ('Science_Intensive_General', 1, 'fall', 6, 0),
+    ('Science_Intensive_General', 1, 'spring', 18, 0),
+    ('Science_Intensive_General', 2, 'fall', 19, 0),
+    ('Science_Intensive_General', 2, 'spring', 19, 0),
+    ('Science_Intensive_General', 3, 'fall', 19, 0),
+    ('Science_Intensive_General', 3, 'spring', 18, 3),
+    ('Science_Intensive_General', 4, 'fall', 17, 0),
+    ('Science_Intensive_General', 4, 'spring', 22, 12),
+    ('Science_ENGL1_General', 1, 'fall', 13, 0),
+    ('Science_ENGL1_General', 1, 'spring', 19, 0),
+    ('Science_ENGL1_General', 2, 'fall', 19, 0),
+    ('Science_ENGL1_General', 2, 'spring', 17, 0),
+    ('Science_ENGL1_General', 3, 'fall', 19, 0),
+    ('Science_ENGL1_General', 3, 'spring', 18, 3),
+    ('Science_ENGL1_General', 4, 'fall', 17, 3),
+    ('Science_ENGL1_General', 4, 'spring', 16, 9),
+    ('Math_ENGL1_General', 1, 'fall', 18, 0),
+    ('Math_ENGL1_General', 1, 'spring', 18, 0),
+    ('Math_ENGL1_General', 2, 'fall', 18, 0),
+    ('Math_ENGL1_General', 2, 'spring', 17, 0),
+    ('Math_ENGL1_General', 3, 'fall', 16, 0),
+    ('Math_ENGL1_General', 3, 'spring', 18, 3),
+    ('Math_ENGL1_General', 4, 'fall', 17, 3),
+    ('Math_ENGL1_General', 4, 'spring', 16, 9),
+    ('Math_Intensive_General', 1, 'fall', 10, 0),
+    ('Math_Intensive_General', 1, 'spring', 17, 0),
+    ('Math_Intensive_General', 2, 'fall', 18, 0),
+    ('Math_Intensive_General', 2, 'spring', 17, 0),
+    ('Math_Intensive_General', 3, 'fall', 19, 0),
+    ('Math_Intensive_General', 3, 'spring', 18, 3),
+    ('Math_Intensive_General', 4, 'fall', 17, 0),
+    ('Math_Intensive_General', 4, 'spring', 22, 12)
   ) AS e (source_sheet, study_year, term_type, printed_total, box_credits)
   WHERE e.printed_total <> e.box_credits + (
     SELECT coalesce(sum(c.credits), 0)
@@ -521,8 +750,47 @@ BEGIN
     WHERE pt.source_sheet = e.source_sheet AND ps.study_year = e.study_year AND ps.term_type = e.term_type
   );
 
-  IF total_count <> 362 OR course_count <> 354 OR pool_count <> 8 THEN
-    RAISE EXCEPTION 'Expected 362 old plan slots (354 course, 8 pool), found % (% course, % pool)',
+  WITH pair (general_sheet, big_data_sheet) AS (
+    VALUES
+      ('Science_Intensive_General', 'Science_Intensive_bigdata'),
+      ('Science_ENGL1_General', 'Science_ENGL1_Bigdata'),
+      ('Math_ENGL1_General', 'Math_ENGL1_Bigdata'),
+      ('Math_Intensive_General', 'Math_Intensive_Bigdata')
+  ),
+  box AS (
+    SELECT pt.source_sheet, ps.study_year, ps.term_type, ps.position, coalesce(c.code, ep.name) AS content
+    FROM plan_slot ps
+    JOIN plan_template pt ON pt.id = ps.plan_template_id
+    LEFT JOIN course c ON c.id = ps.course_id
+    LEFT JOIN elective_pool ep ON ep.id = ps.elective_pool_id
+  ),
+  only_big_data AS (
+    SELECT pair.general_sheet, x.content
+    FROM pair
+    CROSS JOIN LATERAL (
+      SELECT b.study_year, b.term_type, b.position, b.content FROM box b WHERE b.source_sheet = pair.big_data_sheet
+      EXCEPT
+      SELECT g.study_year, g.term_type, g.position, g.content FROM box g WHERE g.source_sheet = pair.general_sheet
+    ) x
+  ),
+  only_general AS (
+    SELECT pair.general_sheet, x.content
+    FROM pair
+    CROSS JOIN LATERAL (
+      SELECT g.study_year, g.term_type, g.position, g.content FROM box g WHERE g.source_sheet = pair.general_sheet
+      EXCEPT
+      SELECT b.study_year, b.term_type, b.position, b.content FROM box b WHERE b.source_sheet = pair.big_data_sheet
+    ) x
+  )
+  SELECT count(*) INTO bad_copy_count
+  FROM pair
+  WHERE (SELECT string_agg(o.content, ',' ORDER BY o.content) FROM only_big_data o WHERE o.general_sheet = pair.general_sheet)
+      IS DISTINCT FROM 'Big Data track technical elective,CSCI 461,CSCI 467'
+    OR (SELECT count(*) FROM only_general o WHERE o.general_sheet = pair.general_sheet AND o.content = 'General track elective') <> 4
+    OR (SELECT count(*) FROM only_general o WHERE o.general_sheet = pair.general_sheet) <> 4;
+
+  IF total_count <> 546 OR course_count <> 522 OR pool_count <> 24 THEN
+    RAISE EXCEPTION 'Expected 546 old plan slots (522 course, 24 pool), found % (% course, % pool)',
       total_count, course_count, pool_count;
   END IF;
 
@@ -540,5 +808,9 @@ BEGIN
 
   IF bad_term_count > 0 THEN
     RAISE EXCEPTION '% old plan terms do not match their printed credit total', bad_term_count;
+  END IF;
+
+  IF bad_copy_count > 0 THEN
+    RAISE EXCEPTION '% general plan templates are not their Big Data sheet with the 3 track boxes replaced by 4 general boxes', bad_copy_count;
   END IF;
 END $$;
