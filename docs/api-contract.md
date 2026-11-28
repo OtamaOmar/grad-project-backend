@@ -120,6 +120,10 @@ One envelope, defined in [contracts/errors.md](../contracts/errors.md):
 | `GET /api/forecast-runs/:runId/courses/:courseId` | Coordinator | Planned, Ayman | One course: aggregates by rule, no student ids. See [evidence-format.md](evidence-format.md) |
 | `GET /api/courses/:courseId/rules` | Coordinator | Planned, Ayman | Stored requisite groups for that course |
 | `GET /api/data-gaps` | Coordinator | Built | The data-gap register, read only. Same rows, filters (`q`, `status`, `category`, `severity`, `affected_entity`), sorts and paging as `GET /api/admin/data-gaps`, plus `open_count` and `resolved_count`. Status is `open` or `resolved`. Writes stay admin-only |
+| `GET /api/coordinator/terms` | Coordinator | **Proposed**, Omar (needs Backend B approval) | Term picker for the forecast and decision screens. See [Proposed coordinator reads](#proposed-coordinator-reads) |
+| `GET /api/coordinator/bylaw-reference` | Coordinator | **Proposed**, Omar (needs Backend B approval) | Both bylaws' stored rules, read only. See below |
+| `GET /api/coordinator/study-plan-baseline` | Coordinator | **Proposed**, Omar (needs Backend B approval) | The official plan sheets, read only. See below |
+| `GET /api/coordinator/study-plan-baseline/:templateId` | Coordinator | **Proposed**, Omar (needs Backend B approval) | One sheet with its slots. See below |
 | `POST /api/explanations` | Coordinator | Planned, Omar (blocked on the FastAPI service) | Builds context from stored rows and calls FastAPI. Does not store the answer |
 | `GET /health` (FastAPI) | Public on FastAPI | Planned, AI team | No service key. FastAPI binds `127.0.0.1` |
 | `POST /explain` (FastAPI) | Node only | Planned, AI team | Requires `X-Service-Key` |
@@ -210,6 +214,48 @@ Response (same shape as a list item):
 Every admin write is saved in the same transaction as an `audit_event` row. Sign-ins, failed sign-ins (with the username typed, as warnings) and sign-outs are logged too. Each entry has: who (user id, username, name and role copied in), what (`action` such as `bylaw.updated`, `category`), which record (`entity_type`, `entity_id`, `entity_label`), the before/after of each changed field (`details`), the masked IP (`10.20.x.x`) and a request id. Nothing is written without its audit entry.
 
 Re-running `npm run db:seed` overwrites the seeded columns of reference tables (for example a bylaw's name or pass percentage) with the seed values. Columns the seeds do not write (`bylaw.status`, `bylaw.effective_from_cohort`) keep their admin values.
+
+### Proposed coordinator reads
+
+Draft, 2026-11-27, for Backend B (Ayman) to approve or change. Not built. All four are read only, coordinator only, and reuse the admin reads that already exist (terms, bylaws, credit limits, grade scales, study plans), so they add no tables and no writes. They replace four calls the coordinator screens make to mocks today. Every value comes from the database; a field with no source is null, never filled in.
+
+**`GET /api/coordinator/terms`**: `{ items, total, planning_term_id, default_cutoff_term_id }`, newest first.
+
+| Field | Source |
+|---|---|
+| `id`, `academic_year`, `term_type`, `status`, `starts_on`, `ends_on`, `registration_locked` | `academic_term_calendar` view, the same values as `GET /api/admin/terms` |
+| `decision_count` | Rows in `offering_decision` for the term |
+| `run_count` | Distinct `forecast_run_id` in `offering_forecast` for the term |
+| `latest_completed_run_id` | null until question 1 is answered |
+| `is_planning_term`, `planning_term_id` | Question 2 |
+| `default_cutoff_term_id` | Question 3 |
+
+**`GET /api/coordinator/bylaw-reference`**: `{ bylaws, class_sizes, comparison }`.
+
+| Field | Source |
+|---|---|
+| `bylaws[]` | Each bylaw as in `GET /api/admin/bylaws/:id`, plus its `credit_limits`, `standing_bands`, `grade_scale` (with letters), `course_count`, `requisite_count` and `rule_count` (credit-limit rows) |
+| `comparison[]` | One row per stored bylaw field (`graduation_credits`, `pass_percentage`, `final_exam_min_percentage`, `training_credits_excluded_from_gpa`), with each bylaw's value and its `source_reference` |
+| `class_sizes` | Question 4. null until then |
+
+**`GET /api/coordinator/study-plan-baseline`**: `{ items, total, templates_2025, students_without_template, students_2025_without_sheet, data_gaps }`.
+
+| Field | Source |
+|---|---|
+| `items[]` | Each `plan_template` from the admin study-plan read: ids, `bylaw_code`, `track_code`, `track_name`, `english_path`, `math_path`, `source_sheet`, `source_reference`, `slot_count`. Renamed for the coordinator screen: `elective_slot_count` is the admin `pool_slot_count`, `total_credits` is `credits_total` (null when a pool's courses differ in credits). `term_types_used` lists the term types the slots use. `status` is `complete`, or `partial` where the admin read says `has_gaps` |
+| `templates_2025` | The 2025 bylaw's templates. Empty today: none are seeded |
+| `data_gaps` | The open gaps the admin read links to these templates (by bylaw scope) |
+| `matched_student_count`, `students_without_template`, `students_2025_without_sheet` | null. They need each student's track and paths, which the student loader does not infer yet (Kamel) |
+| `unreadable_regions` | `[]`. Nothing in the database records them |
+
+**`GET /api/coordinator/study-plan-baseline/:templateId`**: one `items[]` row plus `slots`: `id`, `study_year`, `term_type`, `position`, `course_id`, `elective_pool_id`, `source_reference`, `course` (code, title, credits) or `elective_pool` (`name`, `choose_count`, `courses`). The same data as `GET /api/admin/study-plans/:id`. `404 NOT_FOUND` for an unknown id.
+
+**Questions for Backend B**
+
+1. Runs have no status column today (a run is a `forecast_run_id` on `offering_forecast` rows). What makes a run "completed", so `latest_completed_run_id` can be filled?
+2. Which term is the planning term: the term after the active one, or something the coordinator picks?
+3. Should `default_cutoff_term_id` be the latest closed term before the planning term? It feeds `informationCutoffTermId` in `POST /api/forecast-runs`, so it is your call.
+4. Class sizes (lecture 60, tutorial 30, labs 30/15/15, provisional) are config in the forecast code. Should this route read the same config, or leave `class_sizes` out?
 
 ### Admin reference reads: what is real and what is null
 

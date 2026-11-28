@@ -69,14 +69,14 @@ Screen owner: Abdelrahman.
 
 | Call | Frontend module | Status | Notes |
 |---|---|---|---|
-| `GET /coordinator/bylaw-reference` | `coordinator/rules.js` | Mock only | Proposal: reuse the admin bylaw reads with coordinator access |
+| `GET /coordinator/bylaw-reference` | `coordinator/rules.js` | Proposed in the contract, awaiting Backend B | Draft rows in [api-contract.md](api-contract.md#proposed-coordinator-reads) |
 | `GET /coordinator/dashboard` | `coordinator/dashboard.js` | Mock only | Not designed (assumption: built from forecast runs and decisions) |
 | `GET /coordinator/decision-history` | `coordinator/decisionHistory.js` | Mock only | Waits on the decision-history question (BRIEF §11 item 9) |
 | `GET /coordinator/forecast-runs/:runId/sections` | `coordinator/sections.js` | Mock only | Section calculation is in Ayman's branch plan (`section-calculation-engine`) |
 | `GET /coordinator/forecast-runs/:runId/sections/:courseId` | `coordinator/sections.js` | Mock only | Section calculation is in Ayman's branch plan (`section-calculation-engine`) |
-| `GET /coordinator/study-plan-baseline` | `coordinator/studyPlans.js` | Mock only | Proposal: reuse the admin study-plan reads with coordinator access |
-| `GET /coordinator/study-plan-baseline/:templateId` | `coordinator/studyPlans.js` | Mock only | Proposal: reuse the admin study-plan reads with coordinator access |
-| `GET /coordinator/terms` | `coordinator/terms.js` | Mock only | Proposal: reuse the admin term reads with coordinator access |
+| `GET /coordinator/study-plan-baseline` | `coordinator/studyPlans.js` | Proposed in the contract, awaiting Backend B | Draft rows in [api-contract.md](api-contract.md#proposed-coordinator-reads) |
+| `GET /coordinator/study-plan-baseline/:templateId` | `coordinator/studyPlans.js` | Proposed in the contract, awaiting Backend B | Draft rows in [api-contract.md](api-contract.md#proposed-coordinator-reads) |
+| `GET /coordinator/terms` | `coordinator/terms.js` | Proposed in the contract, awaiting Backend B | Draft rows in [api-contract.md](api-contract.md#proposed-coordinator-reads) |
 | `GET /courses/:courseId/rules` | `coordinator/rules.js` | Planned, Ayman |  |
 | `GET /data-gaps` | `coordinator/dataGaps.js` | Built |  |
 | `GET /forecast-runs` | `coordinator/forecastRuns.js` | Planned, Ayman |  |
