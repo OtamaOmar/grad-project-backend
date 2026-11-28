@@ -5,8 +5,8 @@
 // The password is typed in hidden, or read from the first line of piped input.
 // It is never a command-line argument, so it does not end up in shell history.
 // Roles: coordinator, advisor, admin (admin works once the database role check allows it).
-import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
+import { readPassword } from "./readPassword.js";
 
 const STAFF_ROLES = ["coordinator", "advisor", "admin"];
 
@@ -14,34 +14,6 @@ const STAFF_ROLES = ["coordinator", "advisor", "admin"];
 function fail(message) {
   console.error(message);
   process.exit(1);
-}
-
-// Asks for the password without showing what is typed.
-// When input is piped (not a terminal), it takes the first line instead.
-function readPassword(prompt) {
-  if (!process.stdin.isTTY) {
-    const rl = createInterface({ input: process.stdin });
-    return new Promise((resolve) =>
-      rl.once("line", (line) => (rl.close(), resolve(line))),
-    );
-  }
-  return new Promise((resolve) => {
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      terminal: true,
-    });
-    rl._writeToOutput = (text) => {
-      // Node has no public "hide input" option, so we override how readline echoes:
-      // the prompt is shown, the typed characters are not.
-      if (text.includes(prompt)) process.stdout.write(text);
-    };
-    rl.question(prompt, (answer) => {
-      rl.close();
-      process.stdout.write("\n");
-      resolve(answer);
-    });
-  });
 }
 
 const { values } = parseArgs({

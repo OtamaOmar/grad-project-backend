@@ -20,6 +20,8 @@ Roles on `app_user.role`:
 | `advisor` | Reserved for Phase 2. No Phase 1 routes | `npm run user:create -- --role advisor ...` |
 | `admin` | The five team members. Admin pages | `npm run user:create -- --role admin ...`, each person for themselves |
 
+A lost staff password is replaced with `npm run user:reset-password -- --username <name>` (typed at a hidden prompt). It signs out every session of that account and is audited as `auth.password_reset`. Students change theirs from the profile page.
+
 **Phase 2 has no API contract.** Advising, dynamic offering blocks and the student plan workspace have no routes, no request bodies and no response samples. Do not add endpoints for `student_plan`, `offering_block`, `block_membership`, `block_forecast_link`, `advising_case` or `advising_message`.
 
 ## Session identity
