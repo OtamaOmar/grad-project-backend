@@ -15,7 +15,7 @@ These team and doctor decisions replace older text in this document. Where a see
 |---|---|
 | Pass/fail | The file has letters only, no percentages, so the pass test cannot run. `attempt_state` comes from the letter: `A+` to `D`, `P`, `TR` passed (TR credits count toward standing); `F` failed; `W`, `WP`, `WF` withdrawn (retake next term); `I` unresolved; blank in the latest term active, blank earlier unresolved |
 | Repeated course | The highest grade counts in the CGPA (confirmed by the doctor). Repeat demand uses each course's past repeat rate from history, not 0 |
-| Cohort and bylaw | Cohort year = the year of the student's earliest term in the file (spring < summer < fall). Cohort 2024 or earlier is `old_cs`; first term in 2025 or later is `bylaw_2025`. The two bylaws are never added together |
+| Cohort and bylaw | Cohort year = the year of the student's earliest term in the file (spring < summer < fall). Cohort 2024 or earlier is `old_cs`; first term in 2025 or later is `bylaw_2025` (the 9 students whose first term is Spring 2025 stay `old_cs` until the doctor answers). The two bylaws are never added together |
 | 2025 credit cap, CGPA 3.0 up to 3.3 | 21 credits after the first semester (no longer null). CGPA exactly 3.00 counts |
 | Old bylaw caps | First semester 19. After the first semester, CGPA above 3.0 up to 21. CGPA below 2.0, 13 |
 | Graduating student | Takes exactly the credits still needed, even above the cap or below CGPA 2.0. Summer 9 for graduating |
@@ -23,7 +23,7 @@ These team and doctor decisions replace older text in this document. Where a see
 | Old standing bands | Freshman 0-35, sophomore 36-70, junior 71-105, senior 106+ passed credits |
 | Senior projects `CSCI 495` / `CSCI 496` | 100 passed credits |
 | Internships `CSCI 490` / `COMM 401` | 67 passed credits (no senior standing) |
-| Track and paths | Inferred from course history: only Media electives `media`, only Big Data `big_data`, both `general`, none null. Null and `general` (a track row with no plan template yet, data gap `old_general_track_plan_template`) still mean no sheet demand |
+| Track and paths | Inferred from course history: only Media track courses (compulsory and electives) `media`, only Big Data track courses `big_data`, both `general`, none null (course lists in `features/db-student-roster.md`). Null and `general` (a track row with no plan template yet, data gap `old_general_track_plan_template`) still mean no sheet demand |
 | Class sizes | Lecture 60 (75 on request), tutorial 30, computing lab 30, physics and circuits labs 15. No minimum to open |
 ## Whole system
 
