@@ -9,6 +9,7 @@ export const AUDIT_ACTIONS = Object.freeze({
   "auth.login_failed": "auth",
   "auth.logout": "auth",
   "auth.password_changed": "auth",
+  "auth.password_reset": "auth",
   "user.created": "user_management",
   "user.updated": "user_management",
   "user.deactivated": "user_management",

@@ -21,7 +21,8 @@
     "db:seed": "node scripts/db-seed.js",
     "db:import": "node scripts/db-import.js",
     "test:app": "node --test scripts/test-app-layer.js scripts/test-student-workflow.js scripts/test-offering-decisions.js scripts/test-admin.js",
-    "user:create": "node src/cli/create-staff-user.js"
+    "user:create": "node src/cli/create-staff-user.js",
+    "user:reset-password": "node src/cli/reset-staff-password.js"
   },
   "repository": {
     "type": "git",
