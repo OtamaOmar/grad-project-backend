@@ -44,17 +44,17 @@ A reload does not delete anything. To start from zero, drop the throwaway databa
 
 Suggested run: target term fall 2026, information cutoff spring 2026.
 
-| Student            | Case                                                                                              |
-| ------------------ | ------------------------------------------------------------------------------------------------- |
-| SYN-0001           | No track                                                                                          |
-| SYN-0002           | No English path                                                                                   |
-| SYN-0003           | No math path                                                                                      |
-| SYN-0004           | 2025 bylaw, CGPA 3.00: the CGPA 3.00-3.30 band, 21 credits (was a null maximum)                   |
-| SYN-0005           | Old bylaw, CGPA 3.30: above 3.0 while "first year" is undefined                                   |
-| SYN-0006           | Old bylaw, CGPA exactly 3.00: control, not counted                                                |
-| SYN-0007           | Null `counts_toward_registration_cap` (COMM 401); prerequisite code conflict (CSCI 417, CSCI 415) |
-| SYN-0008           | CSCI 490 needs 67 passed credits (was Senior Standing with no minimum)                            |
-| SYN-0009, SYN-0010 | Unknown repeat intention (withdrawn MATH 210, incomplete HUMA 101)                                |
+| Student            | Case                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| SYN-0001           | No track                                                                              |
+| SYN-0002           | No English path                                                                       |
+| SYN-0003           | No math path                                                                          |
+| SYN-0004           | 2025 bylaw, CGPA 3.00: the CGPA 3.00-3.30 band, 21 credits (was a null maximum)       |
+| SYN-0005           | Old bylaw, CGPA 3.30: above 3.0 while "first year" is undefined                       |
+| SYN-0006           | Old bylaw, CGPA exactly 3.00: control, not counted                                    |
+| SYN-0007           | COMM 401 consumes the cap (was null); prerequisite code conflict (CSCI 417, CSCI 415) |
+| SYN-0008           | CSCI 490 needs 67 passed credits (was Senior Standing with no minimum)                |
+| SYN-0009, SYN-0010 | Unknown repeat intention (withdrawn MATH 210, incomplete HUMA 101)                    |
 
 Details and sources: `docs/features/db-syn-0001-fixtures.md`.
 

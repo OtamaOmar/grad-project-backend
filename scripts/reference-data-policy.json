@@ -75,8 +75,6 @@
         "CSCI 201",
         "CSCI 304",
         "CSCI 404",
-        "CSCI 459",
-        "CSCI 469",
         "ECEN 101",
         "ENGL 100",
         "PHYS 101",
@@ -108,7 +106,7 @@
         "requisites": 53,
         "components": 97,
         "pools": 3,
-        "poolMembers": 22
+        "poolMembers": 24
       },
       "requisites": [
         ["ENGL 102", 1, "course", "ENGL 101", null, null, null],

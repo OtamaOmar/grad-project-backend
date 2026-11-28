@@ -235,11 +235,12 @@ test("credit limits: old summer graduating 9 before default 7; 2025 CGPA 3.00-3.
   assert.ok(firstSemester.priority < band.priority);
 });
 
-test("the 7 sheet-only old courses count in the GPA; their other flags stay null", async () => {
+// Team decision (Omar, 2026-11-28): the workbook codes are official, so the 7 sheet-only old
+// courses count toward the degree and the registration cap (counts_in_gpa since 2026-11-27).
+test("the 7 sheet-only old courses are true / true / true", async () => {
   const { rows } = await client.query(
     `SELECT c.code, c.counts_in_gpa, c.counts_toward_degree, c.counts_toward_registration_cap
-       FROM course c WHERE c.bylaw_id=$1
-        AND (c.counts_in_gpa IS NULL OR c.code = ANY($2)) ORDER BY c.code`,
+       FROM course c WHERE c.bylaw_id=$1 AND c.code = ANY($2) ORDER BY c.code`,
     [
       await oldBylawId(),
       [
@@ -256,9 +257,92 @@ test("the 7 sheet-only old courses count in the GPA; their other flags stay null
   assert.equal(rows.length, 7);
   for (const row of rows) {
     assert.equal(row.counts_in_gpa, true, row.code);
-    assert.equal(row.counts_toward_degree, null, row.code);
-    assert.equal(row.counts_toward_registration_cap, null, row.code);
+    assert.equal(row.counts_toward_degree, true, row.code);
+    assert.equal(row.counts_toward_registration_cap, true, row.code);
   }
+});
+
+// Team decision (BRIEF.md §6, 2026-11-27; provisional until the doctor confirms, Omar
+// 2026-11-28): internship and training count toward the term maximum in both bylaws.
+test("training, internship and senior project courses consume the registration cap", async () => {
+  const { rows } = await client.query(
+    `SELECT b.code AS bylaw, c.code, c.counts_toward_registration_cap AS cap
+       FROM course c JOIN bylaw b ON b.id = c.bylaw_id
+      WHERE (b.code = 'old_cs' AND c.code IN ('CSCI 490', 'COMM 401'))
+         OR (b.code = 'bylaw_2025' AND c.code IN ('CSC 291', 'CSC 391', 'CSC 493', 'CSC 494'))
+      ORDER BY b.code, c.code`,
+  );
+  assert.deepEqual(
+    rows.map((r) => [r.bylaw, r.code, r.cap]),
+    [
+      ["bylaw_2025", "CSC 291", true],
+      ["bylaw_2025", "CSC 391", true],
+      ["bylaw_2025", "CSC 493", true],
+      ["bylaw_2025", "CSC 494", true],
+      ["old_cs", "COMM 401", true],
+      ["old_cs", "CSCI 490", true],
+    ],
+  );
+});
+
+test("no seeded course has a null flag in either bylaw", async () => {
+  const { rows } = await client.query(
+    `SELECT b.code AS bylaw, c.code FROM course c JOIN bylaw b ON b.id = c.bylaw_id
+      WHERE b.code IN ('old_cs', 'bylaw_2025')
+        AND (c.counts_toward_degree IS NULL OR c.counts_in_gpa IS NULL
+             OR c.counts_toward_registration_cap IS NULL)`,
+  );
+  assert.deepEqual(rows, []);
+});
+
+// Team decision (BRIEF.md §6, 2026-11-27): CSCI 459 and CSCI 469 are in the elective lists.
+test("the Media and Big Data pools hold CSCI 459 and CSCI 469", async () => {
+  const { rows } = await client.query(
+    `SELECT ep.name, string_agg(c.code, ',' ORDER BY c.code) AS codes
+       FROM elective_pool ep
+       JOIN elective_pool_course epc ON epc.elective_pool_id = ep.id
+       JOIN course c ON c.id = epc.course_id
+      WHERE ep.bylaw_id = $1
+      GROUP BY ep.name ORDER BY ep.name`,
+    [await oldBylawId()],
+  );
+  const codes = Object.fromEntries(rows.map((r) => [r.name, r.codes]));
+  assert.equal(
+    codes["Media track technical elective"],
+    "CSCI 455,CSCI 456,CSCI 457,CSCI 458,CSCI 459",
+  );
+  assert.equal(
+    codes["Big Data track technical elective"],
+    "CSCI 462,CSCI 464,CSCI 465,CSCI 469",
+  );
+  assert.ok(!codes["General track elective"].includes("CSCI 459"));
+  assert.ok(!codes["General track elective"].includes("CSCI 469"));
+});
+
+test("the 9 data gaps answered by the pools and cap flags decisions are resolved", async () => {
+  const { rows } = await client.query(
+    `SELECT category, status FROM data_gap WHERE category = ANY($1) ORDER BY category`,
+    [
+      [
+        "big_data_elective_csci_469",
+        "media_elective_csci_459",
+        "old_math_302_unknown",
+        "old_prereq_conflict_csci_207",
+        "old_sheet_only_codes",
+        "old_sheet_only_csci_112",
+        "old_track_elective_count",
+        "project_management_code",
+        "training_registration_cap",
+      ],
+    ],
+  );
+  assert.equal(rows.length, 9);
+  assert.ok(rows.every((r) => r.status === "resolved"));
+  // Not part of this decision, still open: the sheet/table code pairs in prerequisites.
+  const { rows: open } = await client.query(
+    `SELECT status FROM data_gap WHERE category = 'old_sheet_vs_table_codes'`,
+  );
+  assert.deepEqual(open, [{ status: "open" }]);
 });
 
 test("the 6 data gaps answered by the team decisions are resolved", async () => {

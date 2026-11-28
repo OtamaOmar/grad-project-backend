@@ -93,8 +93,8 @@ FROM (VALUES
   ('bylaw_2025', 'CSC 466', 'Selected Topics in Quantum Computing', 3, true, true, true, '2025 bylaw Art. 36, p.27'),
   ('bylaw_2025', 'CSEC 451', 'Cybersecurity for Quantum Computing', 3, true, true, true, '2025 bylaw Art. 36, p.27'),
   ('bylaw_2025', 'AIS 407', 'Quantum Machine Learning', 3, true, true, true, '2025 bylaw Art. 36, p.27'),
-  ('bylaw_2025', 'CSC 291', 'Industrial/Research Training I', 3, true, false, NULL, '2025 bylaw Art. 36, p.28'),
-  ('bylaw_2025', 'CSC 391', 'Industrial/Research Training II', 3, true, false, NULL, '2025 bylaw Art. 36, p.28'),
+  ('bylaw_2025', 'CSC 291', 'Industrial/Research Training I', 3, true, false, true, '2025 bylaw Art. 36, p.28; counts_toward_registration_cap: team decision (BRIEF.md §6, 2026-11-27), provisional until the doctor confirms (team decision (Omar, 2026-11-28))'),
+  ('bylaw_2025', 'CSC 391', 'Industrial/Research Training II', 3, true, false, true, '2025 bylaw Art. 36, p.28; counts_toward_registration_cap: team decision (BRIEF.md §6, 2026-11-27), provisional until the doctor confirms (team decision (Omar, 2026-11-28))'),
   ('bylaw_2025', 'CSC 493', 'Senior Project I', 3, true, true, true, '2025 bylaw Art. 36, p.28'),
   ('bylaw_2025', 'CSC 494', 'Senior Project II', 3, true, true, true, '2025 bylaw Art. 36, p.28')
 ) AS v (bylaw_code, code, title, credits, counts_toward_degree, counts_in_gpa, counts_toward_registration_cap, source_reference)
@@ -110,7 +110,7 @@ ON CONFLICT (bylaw_id, code) DO UPDATE SET
   max_attempts = NULL,
   updated_at = now();
 
--- check: 78 courses for the 2025 bylaw, no code with leading/trailing spaces
+-- check: 78 courses for the 2025 bylaw, no code with leading/trailing spaces, no NULL flag
 DO $$
 DECLARE
   course_count integer;
@@ -133,5 +133,15 @@ BEGIN
 
   IF bad_code_count > 0 THEN
     RAISE EXCEPTION '% bylaw_2025 course codes have leading or trailing spaces', bad_code_count;
+  END IF;
+
+  -- every flag is stated: the training courses consume the registration cap by team decision
+  -- (BRIEF.md §6, 2026-11-27; provisional until the doctor confirms, Omar 2026-11-28)
+  IF EXISTS (
+    SELECT 1 FROM course c JOIN bylaw b ON b.id = c.bylaw_id
+    WHERE b.code = 'bylaw_2025'
+      AND (c.counts_toward_degree IS NULL OR c.counts_in_gpa IS NULL OR c.counts_toward_registration_cap IS NULL)
+  ) THEN
+    RAISE EXCEPTION 'A bylaw_2025 course has a NULL counts_toward_degree, counts_in_gpa, or counts_toward_registration_cap';
   END IF;
 END $$;

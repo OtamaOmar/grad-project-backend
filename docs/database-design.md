@@ -366,7 +366,7 @@ Old Computer Science tracks that the sheets actually use: Media, Big Data. The o
 | credits | integer | NO | NO | — | NO | — | Check `>= 0`. Zero is allowed |
 | counts_toward_degree | boolean | YES | NO | — | NO | — | Whether the credits count toward the graduation total. Null means the source did not say |
 | counts_in_gpa | boolean | YES | NO | — | NO | — | Whether credits enter the GPA. Null means the source did not say |
-| counts_toward_registration_cap | boolean | YES | NO | — | NO | — | Whether the course consumes the term registration cap. Null until Nile confirms (training/internship) |
+| counts_toward_registration_cap | boolean | YES | NO | — | NO | — | Whether the course consumes the term registration cap. Null means the source did not say; no seeded course has a null since the team decisions of 2026-11-28 |
 | min_students_to_open | integer | YES | NO | — | NO | null | Minimum headcount to open a section. **Designed null** — no NU policy yet |
 | max_attempts | integer | YES | NO | — | NO | null | Maximum attempts. **Designed null** — no bylaw rule stated |
 | source_reference | text | NO | NO | — | NO | — | Sheet name or bylaw table |
@@ -379,10 +379,11 @@ The three flags are kept separate because the sources treat them separately. One
 |---|---|---|---|
 | Ordinary course, both bylaws | true | true | true |
 | `ENGL 001`, `Math 100` (old, 0 credits) | false | false | true (adds 0 credits) |
-| 2025 training courses | true (part of the 138) | false (2025 Art. 36: the 6 training credits stay out of the GPA) | **null** |
-| Old internship courses `COMM 401`, `CSCI 490` | true (part of the 135, old Art. 17) | true | **null** |
+| 2025 training courses | true (part of the 138) | false (2025 Art. 36: the 6 training credits stay out of the GPA) | true (team decision, provisional) |
+| Old internship courses `COMM 401`, `CSCI 490` | true (part of the 135, old Art. 17) | true | true (team decision, provisional) |
+| Old workbook-only codes `CSCI 112`, `CSCI 102`, `CSCI 208`, `CSCI 305`, `ECEN 101C`, `PHYS 101C`, `SSCI 105` | true (team decision 2026-11-28) | true (team decision 2026-11-27) | true (team decision 2026-11-28) |
 
-The old bylaw states no exclusion from the GPA, and its internship and training credits are part of the 135-credit total. The design therefore treats the two old internship courses as counting toward the GPA; this is the reading the report uses. Whether internship and training consume the registration cap is unresolved for both bylaws (Nile ask 6), so that flag is null and is not inferred from the GPA rule. §17a describes how the forecast handles a null cap flag.
+The old bylaw states no exclusion from the GPA, and its internship and training credits are part of the 135-credit total. The design therefore treats the two old internship courses as counting toward the GPA; this is the reading the report uses. Neither bylaw says whether internship and training consume the registration cap (Nile ask 6); the team decided that they do in both bylaws (BRIEF.md §6, 2026-11-27), provisional until the doctor confirms (Omar, 2026-11-28). The 7 workbook-only codes are official (Omar, 2026-11-28), so they get the ordinary flags; six of them are the same course as a table twin (CSCI 102 / CSCI 201, CSCI 208 / CSCI 304, CSCI 305 / CSCI 404, ECEN 101C / ECEN 101, PHYS 101C / PHYS 101, SSCI 105 / SSCI 301), and CSCI 112 has none. No seeded course has a null flag now; §17a still describes how the forecast handles a null cap flag (for example after an admin edit).
 
 ### `course_component`
 
@@ -1219,7 +1220,7 @@ The other tables are reference data and are **designed to be seeded**. They are 
 
 ## 14. Data gaps
 
-All of these stay `open`, except the two marked resolved (team decisions, 2026-11-27; seed 017 sets their status).
+All of these stay `open`, except the ones marked resolved (team decisions of 2026-11-27 and 2026-11-28; seed 017 sets their status).
 
 | Gap | Affected table | Current value | Why unknown | Status |
 |---|---|---|---|---|
@@ -1228,10 +1229,10 @@ All of these stay `open`, except the two marked resolved (team decisions, 2026-1
 | Old senior threshold | standing_band.min_credits_passed | 106 on the old senior row, plus freshman, sophomore and junior rows | The sheet says “Senior Standing” with no number. The team applied the Old Art. 24 bands (0–35, 36–70, 71–105, 106+) | resolved |
 | Old “first year” | credit_limit, population `past_first_year` | never matched | The old bylaw does not define it, so the 21-credit row is not applied (Nile ask 5) | open |
 | Old weekly hours | course_component | no rows for old courses | The spreadsheet has credits and prerequisites, not lecture, tutorial, and lab hours. Old courses get no implied sections | open |
-| Big Data elective CSCI 469 | elective_pool_course | not inserted from the conflict | The track map names it. The sheet’s elective list does not. No winner chosen | open |
-| Media elective CSCI 459 | elective_pool_course | not inserted from the conflict | Same conflict, media map versus media sheet | open |
-| Project management code | course, plan_slot | both courses kept | The track pictures say SSCI 301; the sheets say SSCI 105. Both are course rows; only SSCI 105 fills sheet slots, and SSCI 301 belongs to the track-picture scenario. Neither is merged into the other | open |
-| Internship and training against the registration cap | course.counts_toward_registration_cap | null on those rows, both bylaws | Neither bylaw says whether they consume the term cap, and the GPA rule does not answer it (Nile ask 6) | open |
+| Big Data elective CSCI 469 | elective_pool_course | in the Big Data pool | The track map names it. The sheet’s elective list does not. The team chose the track map (2026-11-27) | resolved |
+| Media elective CSCI 459 | elective_pool_course | in the Media pool | Same conflict, media map versus media sheet; same decision | resolved |
+| Project management code | course, plan_slot | both courses kept | The track pictures say SSCI 301; the sheets say SSCI 105. Both are course rows; only SSCI 105 fills sheet slots, and SSCI 301 belongs to the track-picture scenario. The team treats them as one course: the enrollment loader reads SSCI301 as SSCI105 | resolved |
+| Internship and training against the registration cap | course.counts_toward_registration_cap | true on those rows, both bylaws | Neither bylaw says whether they consume the term cap (Nile ask 6). The team decided they do, provisional until the doctor confirms | resolved |
 | Repeat eligibility after W or INC | enrollment.attempt_state | `withdrawn` and `unresolved` kept as is | 2025 Art. 13 suggests a reading that is not encoded until confirmed; the old rule is not stated (Nile ask 7) | open |
 | 2025 plan by term | plan_template, plan_slot | no 2025 templates | The eight sheets and the two track pictures cover the old bylaw only (Nile ask 3) | open |
 | Confirmed equivalences | course_equivalence | zero rows | Nobody has confirmed a pair | open |

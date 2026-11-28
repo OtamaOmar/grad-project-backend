@@ -31,7 +31,7 @@ FROM (VALUES
   ('old_cs', 'SSCI 101', 'Selected Topics in Egyptian & Arab Heritage', 3, true, true, true, 'Old CS bylaw course tables, p.19'),
   ('old_cs', 'SSCI 102', 'Selected Topics in World Cultures & Diversity', 3, true, true, true, 'Old CS bylaw course tables, p.19'),
   ('old_cs', 'SSCI 103', 'Selected Topics in Social Sciences', 3, true, true, true, 'Old CS bylaw course tables, p.19'),
-  ('old_cs', 'COMM 401', 'Internship & Service Learning', 3, true, true, NULL, 'Old CS bylaw course tables, p.19'),
+  ('old_cs', 'COMM 401', 'Internship & Service Learning', 3, true, true, true, 'Old CS bylaw course tables, p.19; counts_toward_registration_cap: team decision (BRIEF.md §6, 2026-11-27), provisional until the doctor confirms (team decision (Omar, 2026-11-28))'),
   ('old_cs', 'NSCI 102', 'Selected Topics in Natural Sciences', 3, true, true, true, 'Old CS bylaw course tables, p.19'),
   ('old_cs', 'PHYS 101', 'Physics I', 4, true, true, true, 'Old CS bylaw course tables, p.19'),
   ('old_cs', 'ECEN 101', 'Electric Circuits', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
@@ -43,15 +43,15 @@ FROM (VALUES
   ('old_cs', 'MATH 203', 'Differential Equations', 4, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'MATH 301', 'Linear Algebra', 4, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 101', 'Computer & Information Skills', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
-  ('old_cs', 'CSCI 112', 'Intermediate Programming', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H8:J8; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
-  ('old_cs', 'CSCI 102', 'Introduction to Programming', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B8:D8; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
-  ('old_cs', 'CSCI 208', 'Analysis Design of Algorithms', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H18:J18; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
-  ('old_cs', 'CSCI 305', 'Database Systems', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H28:J28; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
-  ('old_cs', 'ECEN 101C', 'Electric Circuits', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B16:D16; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'CSCI 112', 'Intermediate Programming', 3, true, true, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H8:J8; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27); counts_toward_degree, counts_toward_registration_cap: team decision (Omar, 2026-11-28): workbook codes official'),
+  ('old_cs', 'CSCI 102', 'Introduction to Programming', 3, true, true, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B8:D8; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27); counts_toward_degree, counts_toward_registration_cap: team decision (Omar, 2026-11-28): workbook codes official, same course as table twin CSCI 201'),
+  ('old_cs', 'CSCI 208', 'Analysis Design of Algorithms', 3, true, true, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H18:J18; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27); counts_toward_degree, counts_toward_registration_cap: team decision (Omar, 2026-11-28): workbook codes official, same course as table twin CSCI 304'),
+  ('old_cs', 'CSCI 305', 'Database Systems', 3, true, true, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H28:J28; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27); counts_toward_degree, counts_toward_registration_cap: team decision (Omar, 2026-11-28): workbook codes official, same course as table twin CSCI 404'),
+  ('old_cs', 'ECEN 101C', 'Electric Circuits', 3, true, true, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B16:D16; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27); counts_toward_degree, counts_toward_registration_cap: team decision (Omar, 2026-11-28): workbook codes official, same course as table twin ECEN 101'),
   ('old_cs', 'ENGL 001', 'Intensive English', 0, false, false, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B6:D6'),
   ('old_cs', 'MATH 100', 'Pre-calculus', 0, false, false, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, B7:D7'),
-  ('old_cs', 'PHYS 101C', 'Physics I', 4, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H6:J6; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
-  ('old_cs', 'SSCI 105', 'Selected Topics in Social Sciences-Project Managemen', 3, NULL, true, NULL, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H42:J42; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'PHYS 101C', 'Physics I', 4, true, true, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H6:J6; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27); counts_toward_degree, counts_toward_registration_cap: team decision (Omar, 2026-11-28): workbook codes official, same course as table twin PHYS 101'),
+  ('old_cs', 'SSCI 105', 'Selected Topics in Social Sciences-Project Managemen', 3, true, true, true, 'CS-StudyPlan_Sep 24.xlsx, sheet Science_Intensive_Media, H42:J42; counts_in_gpa: team decision (BRIEF.md §6, 2026-11-27); counts_toward_degree, counts_toward_registration_cap: team decision (Omar, 2026-11-28): workbook codes official, same course as table twin SSCI 301'),
   ('old_cs', 'CSCI 201', 'Introduction to Programming', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 205', 'Introduction to Computer Systems', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
   ('old_cs', 'CSCI 207', 'Fundamentals of Data Structures & Algorithms', 3, true, true, true, 'Old CS bylaw course tables, p.20'),
@@ -67,7 +67,7 @@ FROM (VALUES
   ('old_cs', 'CSCI 417', 'Machine Intelligence', 3, true, true, true, 'Old CS bylaw course tables, p.21'),
   ('old_cs', 'CSCI 419', 'Theory of Computing', 3, true, true, true, 'Old CS bylaw course tables, p.21'),
   ('old_cs', 'CSCI 463', 'Introduction to Computer Networks', 3, true, true, true, 'Old CS bylaw course tables, p.21'),
-  ('old_cs', 'CSCI 490', 'Industrial/Research Training', 2, true, true, NULL, 'Old CS bylaw course tables, p.21'),
+  ('old_cs', 'CSCI 490', 'Industrial/Research Training', 2, true, true, true, 'Old CS bylaw course tables, p.21; counts_toward_registration_cap: team decision (BRIEF.md §6, 2026-11-27), provisional until the doctor confirms (team decision (Omar, 2026-11-28))'),
   ('old_cs', 'CSCI 495', 'Senior Project I', 2, true, true, true, 'Old CS bylaw course tables, p.21'),
   ('old_cs', 'CSCI 496', 'Senior Project II', 2, true, true, true, 'Old CS bylaw course tables, p.21'),
   ('old_cs', 'CSCI 451', 'Digital Image Processing', 3, true, true, true, 'Old CS bylaw course tables, p.21'),
@@ -100,7 +100,7 @@ ON CONFLICT (bylaw_id, code) DO UPDATE SET
   max_attempts = NULL,
   updated_at = now();
 
--- check: 67 courses for the old bylaw, no code with leading/trailing spaces
+-- check: 67 courses for the old bylaw, no code with leading/trailing spaces, no NULL flag
 DO $$
 DECLARE
   course_count integer;
@@ -125,23 +125,26 @@ BEGIN
     RAISE EXCEPTION '% old_cs course codes have leading or trailing spaces', bad_code_count;
   END IF;
 
-  -- counts_in_gpa is stated for every old course: the 7 sheet-only codes that had none are
-  -- true by team decision; their two other flags stay NULL (not stated by any source)
+  -- every flag is stated for every old course: counts_in_gpa of the 7 sheet-only codes and the
+  -- registration cap of COMM 401 and CSCI 490 by team decision (BRIEF.md §6, 2026-11-27; the cap
+  -- provisional until the doctor confirms, Omar 2026-11-28); the 2 other flags of the 7 sheet-only
+  -- codes by team decision (Omar, 2026-11-28)
   IF EXISTS (
     SELECT 1 FROM course c JOIN bylaw b ON b.id = c.bylaw_id
-    WHERE b.code = 'old_cs' AND c.counts_in_gpa IS NULL
+    WHERE b.code = 'old_cs'
+      AND (c.counts_toward_degree IS NULL OR c.counts_in_gpa IS NULL OR c.counts_toward_registration_cap IS NULL)
   ) THEN
-    RAISE EXCEPTION 'An old_cs course has counts_in_gpa NULL';
+    RAISE EXCEPTION 'An old_cs course has a NULL counts_toward_degree, counts_in_gpa, or counts_toward_registration_cap';
   END IF;
 
   IF (
     SELECT count(*) FROM course c JOIN bylaw b ON b.id = c.bylaw_id
     WHERE b.code = 'old_cs'
-      AND c.code IN ('CSCI 102', 'CSCI 112', 'CSCI 208', 'CSCI 305', 'ECEN 101C', 'PHYS 101C', 'SSCI 105')
+      AND c.code IN ('CSCI 102', 'CSCI 112', 'CSCI 208', 'CSCI 305', 'ECEN 101C', 'PHYS 101C', 'SSCI 105', 'COMM 401', 'CSCI 490')
+      AND c.counts_toward_degree
       AND c.counts_in_gpa
-      AND c.counts_toward_degree IS NULL
-      AND c.counts_toward_registration_cap IS NULL
-  ) <> 7 THEN
-    RAISE EXCEPTION 'Expected the 7 sheet-only old_cs courses with counts_in_gpa true and the two other flags NULL';
+      AND c.counts_toward_registration_cap
+  ) <> 9 THEN
+    RAISE EXCEPTION 'Expected the 7 sheet-only old_cs courses, COMM 401, and CSCI 490 with all three flags true';
   END IF;
 END $$;

@@ -1,4 +1,5 @@
--- elective_pool (old bylaw: Media and Big Data track electives of the study-plan sheets, and the
+-- elective_pool (old bylaw: Media and Big Data track electives of the study-plan sheets, plus CSCI 459
+-- and CSCI 469 of the track tables, team decision (BRIEF.md §6, 2026-11-27), and the
 -- general track elective list, pp.21-22 and p.30, team decision 2026-11-28; 2025 bylaw: Computer Science program pools of Article 36 and its suggested study plan)
 -- elective_pool has no UNIQUE key, so a pool is matched on bylaw, track, and name:
 -- existing matches get their choose_count and source_reference updated, missing pools are inserted.
@@ -6,8 +7,8 @@
 -- Tracks belong to the CS program of the pool's bylaw.
 WITH v (bylaw_code, track_code, name, choose_count, source_reference) AS (
   VALUES
-  ('old_cs', 'media', 'Media track technical elective', 1, 'CS-StudyPlan_Sep 24.xlsx, Media sheets: Technical Elective slot H41, List of CS electives B49:B52; Old CS bylaw course tables, p.22'),
-  ('old_cs', 'big_data', 'Big Data track technical elective', 1, 'CS-StudyPlan_Sep 24.xlsx, Big Data sheets: Technical Elective slot H41, List of CS electives B49:B51; Old CS bylaw course tables, p.23'),
+  ('old_cs', 'media', 'Media track technical elective', 1, 'CS-StudyPlan_Sep 24.xlsx, Media sheets: Technical Elective slot H41, List of CS electives B49:B52; Old CS bylaw course tables, p.22; CSCI 459: Old CS bylaw course tables, p.22, team decision (BRIEF.md §6, 2026-11-27)'),
+  ('old_cs', 'big_data', 'Big Data track technical elective', 1, 'CS-StudyPlan_Sep 24.xlsx, Big Data sheets: Technical Elective slot H41, List of CS electives B49:B51; Old CS bylaw course tables, p.23; CSCI 469: Old CS bylaw course tables, p.23, team decision (BRIEF.md §6, 2026-11-27)'),
   ('old_cs', 'general', 'General track elective', 1, 'CS Old Bylaws.pdf, course tables, pp.21-22 ("Computer Science General Track Elective Requirements 12 credit hours"); elective list, p.30 ("Electives - General Track"); one course per box (choose_count 1, BRIEF.md §6); 4 boxes per general plan, 1 in Year 3 Spring and 3 in Year 4 Spring: team decision (Omar, 2026-11-28)'),
   ('bylaw_2025', NULL, 'CS Humanities elective', 1, '2025 bylaw Art. 36, p.24; suggested CS study plan, pp.33-34'),
   ('bylaw_2025', NULL, 'CS Social Sciences elective', 1, '2025 bylaw Art. 36, p.24; suggested CS study plan, p.34'),
@@ -75,9 +76,11 @@ FROM (VALUES
   ('old_cs', 'Media track technical elective', 'CSCI 456'),
   ('old_cs', 'Media track technical elective', 'CSCI 457'),
   ('old_cs', 'Media track technical elective', 'CSCI 458'),
+  ('old_cs', 'Media track technical elective', 'CSCI 459'),
   ('old_cs', 'Big Data track technical elective', 'CSCI 462'),
   ('old_cs', 'Big Data track technical elective', 'CSCI 464'),
   ('old_cs', 'Big Data track technical elective', 'CSCI 465'),
+  ('old_cs', 'Big Data track technical elective', 'CSCI 469'),
   ('old_cs', 'General track elective', 'CSCI 451'),
   ('old_cs', 'General track elective', 'CSCI 452'),
   ('old_cs', 'General track elective', 'CSCI 455'),
@@ -134,9 +137,10 @@ JOIN elective_pool ep ON ep.bylaw_id = b.id AND ep.name = v.pool_name
 JOIN course c ON c.bylaw_id = b.id AND c.code = v.course_code
 ON CONFLICT (elective_pool_id, course_id) DO NOTHING;
 
--- check: 3 old_cs pools with 22 members, 6 bylaw_2025 pools with 35 members,
--- no pool name twice in a bylaw, no pool without members, CSCI 459 and CSCI 469 in no pool,
--- and "General track elective" is on track general with choose_count 1 and exactly its 15 courses
+-- check: 3 old_cs pools with 24 members, 6 bylaw_2025 pools with 35 members,
+-- no pool name twice in a bylaw, no pool without members, the Media and Big Data pools have exactly
+-- their sheet lists plus CSCI 459 / CSCI 469, and "General track elective" is on track general with
+-- choose_count 1 and exactly its 15 courses (without CSCI 459 and CSCI 469)
 DO $$
 DECLARE
   old_pool_count integer;
@@ -145,7 +149,8 @@ DECLARE
   new_member_count integer;
   duplicate_name_count integer;
   empty_pool_count integer;
-  held_out_member_count integer;
+  media_member_codes text;
+  big_data_member_codes text;
   general_pool_count integer;
   general_member_codes text;
 BEGIN
@@ -178,12 +183,15 @@ BEGIN
     SELECT 1 FROM elective_pool_course epc WHERE epc.elective_pool_id = ep.id
   );
 
-  SELECT count(*) INTO held_out_member_count
+  SELECT
+    string_agg(c.code, ',' ORDER BY c.code) FILTER (WHERE ep.name = 'Media track technical elective'),
+    string_agg(c.code, ',' ORDER BY c.code) FILTER (WHERE ep.name = 'Big Data track technical elective')
+  INTO media_member_codes, big_data_member_codes
   FROM elective_pool_course epc
+  JOIN elective_pool ep ON ep.id = epc.elective_pool_id
+  JOIN bylaw b ON b.id = ep.bylaw_id
   JOIN course c ON c.id = epc.course_id
-  JOIN bylaw b ON b.id = c.bylaw_id
-  WHERE b.code = 'old_cs'
-    AND c.code IN ('CSCI 459', 'CSCI 469');
+  WHERE b.code = 'old_cs';
 
   SELECT count(*) INTO general_pool_count
   FROM elective_pool ep
@@ -203,8 +211,8 @@ BEGIN
       old_pool_count, new_pool_count;
   END IF;
 
-  IF old_member_count <> 22 OR new_member_count <> 35 THEN
-    RAISE EXCEPTION 'Expected 22 old_cs and 35 bylaw_2025 elective pool members, found % and %',
+  IF old_member_count <> 24 OR new_member_count <> 35 THEN
+    RAISE EXCEPTION 'Expected 24 old_cs and 35 bylaw_2025 elective pool members, found % and %',
       old_member_count, new_member_count;
   END IF;
 
@@ -216,8 +224,12 @@ BEGIN
     RAISE EXCEPTION '% elective pools have no members', empty_pool_count;
   END IF;
 
-  IF held_out_member_count > 0 THEN
-    RAISE EXCEPTION 'CSCI 459 or CSCI 469 is in an elective pool (% rows)', held_out_member_count;
+  IF media_member_codes IS DISTINCT FROM 'CSCI 455,CSCI 456,CSCI 457,CSCI 458,CSCI 459' THEN
+    RAISE EXCEPTION 'Media track technical elective members differ from CSCI 455-459: %', media_member_codes;
+  END IF;
+
+  IF big_data_member_codes IS DISTINCT FROM 'CSCI 462,CSCI 464,CSCI 465,CSCI 469' THEN
+    RAISE EXCEPTION 'Big Data track technical elective members differ from CSCI 462, 464, 465, 469: %', big_data_member_codes;
   END IF;
 
   IF general_pool_count <> 1 THEN

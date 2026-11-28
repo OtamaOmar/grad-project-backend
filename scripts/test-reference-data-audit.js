@@ -42,9 +42,30 @@ test("baseline passes in a read-only transaction and reports known omissions", a
     assert.ok(!result.warnings.some((s) => s.includes("CSCI 495")));
     assert.ok(!result.warnings.some((s) => s.includes("CSC 493")));
     assert.ok(result.warnings.some((s) => s.includes("AIS 331")));
+    // CSCI 459 and CSCI 469 are placed through the Media / Big Data pools (team decision 2026-11-27).
+    assert.ok(!result.warnings.some((s) => s.includes("CSCI 459")));
+    assert.ok(!result.warnings.some((s) => s.includes("CSCI 469")));
   } finally {
     await client.query("ROLLBACK");
   }
+});
+
+test("detects CSCI 459 missing from the Media pool", async () => {
+  await withDamage(
+    `DELETE FROM elective_pool_course WHERE
+    elective_pool_id=(SELECT ep.id FROM elective_pool ep JOIN bylaw b ON b.id=ep.bylaw_id
+      WHERE b.code='old_cs' AND ep.name='Media track technical elective')
+    AND course_id=(SELECT c.id FROM course c JOIN bylaw b ON b.id=c.bylaw_id
+      WHERE b.code='old_cs' AND c.code='CSCI 459')`,
+    ({ errors }) => {
+      assert.ok(errors.includes("old_cs: expected 24 poolMembers, found 23"));
+      assert.ok(
+        errors.includes(
+          "old_cs: CSCI 459 unexpectedly has no plan placement (direct or elective)",
+        ),
+      );
+    },
+  );
 });
 
 test("detects the original failure: all 2025 plan slots missing", async () => {
