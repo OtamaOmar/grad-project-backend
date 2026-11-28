@@ -116,7 +116,7 @@ Bylaw sources: old CS bylaw (credit system, 135 credits, 3 tracks incl. general)
 - Repeat demand (students retaking a passed course) uses the **past repeat rate per course** from history, not 0.
 
 **Student paths and track (inferred from course history, no official source)**
-- Track: only Media-track electives taken -> `media`; only Big Data -> `big_data`; **both -> `general`**; none -> NULL. `CSCI 451` counts as Media. General has no sheet: shared slots until Year 3 Fall, then track slots become elective boxes. Media and Big Data sheets are identical until Year 3 Fall, so a NULL track costs nothing before then.
+- Track: only Media-track electives taken -> `media`; only Big Data -> `big_data`; **both -> `general`**; none -> NULL. `CSCI 451` counts as Media. General has no sheet: shared slots until Year 3 Fall, then track slots become elective boxes. Media and Big Data sheets are identical until Year 3 Fall except the Math_Intensive pair (cells H5, B16, B17 hold the same 3 courses in a different order; Kamel, PR #44), so a NULL track costs almost nothing before then. The general template copies the Big Data sheets (decided 2026-11-28).
 - English path (proposed): took `ENGL001/001A/002/003` -> `intensive`, else `ENGL101` -> `english_1`. Math path (proposed): took `MATH100` or `MATH001` -> `precalculus`, else `MATH111` -> `calculus_1`. No evidence -> NULL, no sheet demand, counted in the run response. Unknown: what `MATH111I`/`MATH112I` mean (267 students). Ask doctor/registrar.
 - Measured in the sheet: 37 Media only, 268 Big Data only, 53 both, 368 none.
 
