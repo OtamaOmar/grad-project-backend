@@ -98,7 +98,7 @@ Where §15.2 gives a name, that name is used as is.
 | `offering_forecast`  | `offering_forecast_class_sizes_check`         | The three class sizes are null or `> 0`                                                                         | §3 offering_forecast         |
 | `offering_decision`  | `offering_decision_approver_check`            | If any opening flag is set, `approved_by_user_id`, `approved_by_name` and `approved_at` are all set             | §3 offering_decision, §15.1  |
 | `data_gap`           | `data_gap_status_check`                       | `status` in `open`, `resolved`                                                                                  | §3 data_gap                  |
-| `app_user`           | `app_user_role_check`                         | `role` in `student`, `coordinator`, `advisor`                                                                   | §19 app_user                 |
+| `app_user`           | `app_user_role_check`                         | `role` in `student`, `coordinator`, `advisor`, `admin`                                                          | §19 app_user                 |
 | `app_user`           | `app_user_student_id_role_check`              | `student_id` is set exactly when `role = 'student'`                                                             | §19 app_user                 |
 | `app_user`           | `app_user_auth_provider_check`                | `auth_provider` in `local`, `sso`                                                                               | §19 app_user                 |
 | `app_user`           | `app_user_local_password_check`               | `password_hash` is set when `auth_provider = 'local'`                                                           | §19 app_user                 |
@@ -175,6 +175,7 @@ npm run migrate:up
 - Task 1: `migrate:down` removed only its checks and indexes; the 24 tables stayed.
 - Task 2 (historical): `migrate:down` now undoes only the newest migration: it drops the 5 triggers and 5 functions. The Task 1 checks and indexes stay.
 - Task 3: `migrate:down` now undoes only the integrity follow-up: it drops the 6 bylaw_id triggers, the function and `forecast_line_rule_number_check`, then sets `rule_number` NOT NULL again. Prerequisite: no forecast_line row with `rule_number` NULL; otherwise it fails with 23502 and nothing changes.
+- The `admin` role comes from Omar's migration `1793836800000_admin-role.sql`; its `migrate:down` refuses (error 23514) while admin users exist and never deletes them.
 - In psql, `\d+ <table>` lists the checks; `\di` lists the indexes.
 - After seeding, `npm run db:seed` must still pass (the seed rows must satisfy every check).
 - Tested on a database with the Part A seed rows: all rows passed every check, and 3 bad updates (data_gap status 'closed', bylaw pass_percentage 150, credit_limit term_type 'winter') were rejected by their CHECK constraints.
