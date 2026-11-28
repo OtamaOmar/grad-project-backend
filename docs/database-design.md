@@ -48,7 +48,7 @@ The grade scale header for one bylaw. One bylaw has one scale.
 One letter on that scale: percentage bounds and grade points. Letters are not shared across bylaws.
 
 **`standing_band`**
-One academic level for one bylaw, defined by credits already passed. The 2025 bands have numbers. The old senior band does not.
+One academic level for one bylaw, defined by credits already passed. Both bylaws have four numbered bands (the old ones by team decision, 2026-11-27).
 
 **`placement`**
 One named placement or certificate prerequisite for one bylaw (for example high-school mathematics). Requisite rows of type `placement` point here instead of storing a free-text code.
@@ -195,9 +195,12 @@ A row with `population = 'credits_remaining_below_minimum'` and `min_credits` nu
 | 1 | fall_spring | default | below 2.0 (max 2.0, not inclusive) | 13 | — |
 | 2 | fall_spring | past_first_year | above 3.0 (min 3.0, not inclusive) | 21 | — |
 | 3 | fall_spring | default | any CGPA not caught above | 19 | — |
-| 4 | summer | default | any | 7 | — |
+| 4 | summer | graduating | any | 9 | — |
+| 5 | summer | default | any | 7 | — |
 
 Exactly 3.0 does **not** get 21. The article says above 3.0. A first-year student does **not** get 21, because that row also requires `past_first_year`.
+
+Summer: a graduating student may take 9 (priority 4, team decision, 2026-11-27); every other old-bylaw student 7 (priority 5). The graduating row comes first because the first matching row wins. Seed 001 moves the summer default row from priority 4 to 5 before it inserts the graduating row, so on a database seeded earlier the default row keeps its id.
 
 The old bylaw does not define “first year”. It is not “under 27 credits” and not “the first two semesters”; those thresholds belong to the 2025 bylaw. Until an old-bylaw article defines it, no student is classified as `past_first_year`, so priority 2 never matches. An old-bylaw student above 3.0 falls to priority 3 (19), and the forecast counts that student in `offering_forecast.first_year_undefined_student_count`, so the headcount is marked incomplete. Old Article 16 also requires the advisor’s approval for the 21-credit load. That approval belongs to the Phase 2 advising workflow and is not a column here.
 
@@ -210,13 +213,13 @@ The old bylaw does not define “first year”. It is not “under 27 credits”
 | 3 | fall_spring | default | at least 3.3 (min 3.3, inclusive) | 21 | — |
 | 4 | fall_spring | graduating | any | 21 | — |
 | 5 | fall_spring | default | at least 2.0 and below 3.0 | 18 | — |
-| 6 | fall_spring | default | at least 3.0 and below 3.3 | **null** | — |
+| 6 | fall_spring | default | at least 3.0 and below 3.3 | 21 | — |
 | 7 | fall_spring | default | any not caught above | — | 9 |
 | 8 | fall_spring | credits_remaining_below_minimum | any | — | null (floor waived) |
 | 9 | summer | graduating | any | 9 | — |
 | 10 | summer | default | any | 6 | — |
 
-Priority 6 is the open gap. It must be inserted. Its maximum must stay null. A graduating student inside that band matches priority 4 first and receives 21.
+Priority 6 was an open gap (the article skips this band); its maximum is 21 by team decision, 2026-11-27, after the first semester (a first-semester student matches priority 1 first). A graduating student inside that band matches priority 4 first and also receives 21.
 
 The order also means a graduating student below 2.0 matches priority 2 (12) before priority 4 (21). Article 10 has to be re-read to confirm that the low-GPA cap outranks the graduating allowance. If it does not, only the two priorities swap; no row changes.
 
@@ -291,13 +294,16 @@ Several 2025 percentage lines are split across the PDF text, so both scales are 
 | junior | 62 | 96 |
 | senior | 96 | null |
 
-Old seed:
+Old seed (Article 24 numbers, applied by team decision, 2026-11-27):
 
-| level | min | max |
+| level | min (inclusive) | max (exclusive) |
 |---|---|---|
-| senior | null | null |
+| freshman | 0 | 36 |
+| sophomore | 36 | 71 |
+| junior | 71 | 106 |
+| senior | 106 | null |
 
-That old row is the study-plan phrase “Senior Standing”, which carries no number. Old Article 24 gives an approximate classification in steps of about 20 percent of the degree: freshman 0–35, sophomore 36–70, junior 71–105, senior 106–135 passed credits. Whether that band governs the “Senior Standing” requisite has not been confirmed (Nile ask 4). Until it is, the old senior row keeps a null minimum — **do not seed 106** until Nile confirms — the other three old levels are not inserted, and the Article 24 numbers live only in the `data_gap` note. Confirming them means filling four rows, not changing the schema.
+That is freshman 0–35, sophomore 36–70, junior 71–105, senior 106+ passed credits. Before this decision the old seed had only a `senior` row with a null minimum, for the study-plan phrase “Senior Standing”, which carries no number. No old requisite uses a standing band now: the courses that said “Senior Standing” use credit minimums (§10).
 
 ### `placement`
 
@@ -614,7 +620,7 @@ Designed row count: **0**.
 | implied_tutorial_sections | integer | YES | NO | — | NO | — | `ceil(predicted_headcount ÷ tutorial_class_size)` |
 | implied_lab_sections | integer | YES | NO | — | NO | — | `ceil(predicted_headcount ÷ lab_class_size)` |
 | unresolved_pair_count | integer | NO | NO | — | NO | 0 | Students whose p for this course is unresolved (unknown repeat intention, unscored standing) |
-| null_cap_student_count | integer | NO | NO | — | NO | 0 | Students on this course whose matched maximum is null (2025, CGPA 3.0 to below 3.3, not graduating) |
+| null_cap_student_count | integer | NO | NO | — | NO | 0 | Students on this course whose matched maximum is null (until 2026-11-27 the 2025 CGPA 3.0 to below 3.3 band; that band is 21 now) |
 | first_year_undefined_student_count | integer | NO | NO | — | NO | 0 | Old-bylaw students above 3.0 held at 19 because “first year” is undefined |
 | cap_flag_unknown_student_count | integer | NO | NO | — | NO | 0 | Students whose cap trim met a course with a null `counts_toward_registration_cap` |
 | is_incomplete | boolean | NO | NO | — | NO | generated | Generated, stored: true when any of the four counts above is greater than 0 |
@@ -1011,13 +1017,13 @@ Numbers live in rows, not in application constants.
 
 **Old bylaw, on `bylaw`:** 135 graduation credits, pass at 50 percent. Training-excluded and final-exam minimum are null.
 
-**Old bylaw, on `credit_limit`:** fall/spring max 13 when CGPA is below 2.0; max 21 only when CGPA is above 3.0 and the student is past the first year; otherwise max 19. Summer max 7.
+**Old bylaw, on `credit_limit`:** fall/spring max 13 when CGPA is below 2.0; max 21 only when CGPA is above 3.0 and the student is past the first year; otherwise max 19. Summer max 7, or 9 for a graduating student (team decision, 2026-11-27).
 
 **2025 bylaw, on `bylaw`:** 138 graduation credits, 6 training credits excluded from the GPA, pass at 60 percent, final exam at least 30 percent.
 
-**2025 bylaw, on `credit_limit`:** first semester max 18; CGPA below 2.0 max 12; CGPA at least 3.3 max 21; graduating that year max 21; CGPA at least 2.0 and below 3.0 max 18; minimum 9 unless fewer than 9 credits remain; summer max 6, or 9 in order to graduate.
+**2025 bylaw, on `credit_limit`:** first semester max 18; CGPA below 2.0 max 12; CGPA at least 3.3 max 21; graduating that year max 21; CGPA at least 2.0 and below 3.0 max 18; CGPA at least 3.0 and below 3.3 max 21 (team decision, 2026-11-27); minimum 9 unless fewer than 9 credits remain; summer max 6, or 9 in order to graduate.
 
-**2025 CGPA at least 3.0 and below 3.3:** the row exists, and `max_credits` is null. The article never gives that cap. Null is a stored fact that the rule is missing. Putting 18 or 21 there would make a later query look authoritative. A coordinator reading null knows the bylaw must be asked. A coordinator reading 18 would trust a number the university did not write.
+**2025 CGPA at least 3.0 and below 3.3:** the article never gives that cap. The row was seeded with a null maximum until the team set it to 21 after the first semester (team decision, 2026-11-27); CGPA exactly 3.00 is in this band. The row's `source_reference` names the team decision, not the article.
 
 ---
 
@@ -1062,9 +1068,16 @@ Standing is credits already passed, per bylaw.
 | Junior | 62 up to but not including 96 |
 | Senior | 96 or more |
 
-Old bylaw: one `standing_band` row, level `senior`, `min_credits_passed` null. The study plan says CSCI 495 requires Senior Standing and does not give a credit count. A requisite of type `standing` points at that row through `standing_band_id` (not a free-text level). The numeric test cannot be evaluated until the gap is closed, so the student–course pair is unresolved: it is kept out of the headcount and counted in `offering_forecast.unresolved_pair_count`. That is intentional.
+Old bylaw, four bands from Article 24 (team decision, 2026-11-27):
 
-Old Article 24 gives approximate bands (freshman 0–35, sophomore 36–70, junior 71–105, senior 106–135 passed credits). They are the candidate answer, recorded in the gap note. They become rows only after the faculty confirms that the Article 24 band governs the requisite.
+| Level | Credits passed |
+|---|---|
+| Freshman | 0 up to but not including 36 |
+| Sophomore | 36 up to but not including 71 |
+| Junior | 71 up to but not including 106 |
+| Senior | 106 or more |
+
+No old requisite points at a band. “Senior Standing” (CSCI 490 in the course table, CSCI 495 on the sheet) was replaced by credit minimums: CSCI 490 and COMM 401 need 67 passed credits, CSCI 495 and CSCI 496 need 100 (§10).
 
 ---
 
@@ -1118,13 +1131,13 @@ Meaning: `CSCI 207` OR `MATH 211`.
 
 **What `CSCI 207` actually requires** on the Science Intensive Big Data sheet is only `CSCI 112`, one row, group 1. It is not the AND above. The end-to-end example uses that real row.
 
-**Senior Standing** for `CSCI 495`:
+**Credit minimum** for `CSCI 495` (team decision, 2026-11-27; it replaces “Senior Standing” on the sheet and “8 core courses” in the table):
 
-| Target | group | type | standing_band_id | required_course_id | placement_id |
-|---|---|---|---|---|---|
-| CSCI 495 | 1 | standing | old-bylaw `standing_band` row where `level = 'senior'` | null | null |
+| Target | group | type | min_credits_passed | standing_band_id | required_course_id | placement_id |
+|---|---|---|---|---|---|---|
+| CSCI 495 | 1 | credits | 100 | null | null | null |
 
-No fake course named “Senior Standing.” The band row is the same one seeded in §3 (`min_credits_passed` stays null until Nile confirms Article 24).
+No fake course named “Senior Standing” and no standing band. `CSCI 496` has the same 100-credit row plus `CSCI 495` in group 1, so both apply; `CSCI 490` and `COMM 401` have a 67-credit row.
 
 **High-school mathematics** on a 2025 course whose prerequisite is the school certificate rather than a catalog course:
 
@@ -1197,13 +1210,13 @@ The other tables are reference data and are **designed to be seeded**. They are 
 
 ## 14. Data gaps
 
-All of these stay `open`.
+All of these stay `open`, except the two marked resolved (team decisions, 2026-11-27; seed 017 sets their status).
 
 | Gap | Affected table | Current value | Why unknown | Status |
 |---|---|---|---|---|
 | Official class size | course_component.max_students | null on every component | No bylaw or sheet states a room capacity. The forecast uses team class sizes and stores them on each forecast row | open |
-| Credit cap for CGPA 3.0 up to but not including 3.3 | credit_limit.max_credits | null on that 2025 row | The 2025 article states the bands around it and skips this one. Affected headcounts are marked incomplete | open |
-| Old senior threshold | standing_band.min_credits_passed | null on the old senior row | The sheet says “Senior Standing” with no number. Old Art. 24 gives approximate bands (senior 106–135) that are not yet confirmed to govern the requisite (Nile ask 4) | open |
+| Credit cap for CGPA 3.0 up to but not including 3.3 | credit_limit.max_credits | 21 on that 2025 row | The 2025 article states the bands around it and skips this one; the team set 21 after the first semester | resolved |
+| Old senior threshold | standing_band.min_credits_passed | 106 on the old senior row, plus freshman, sophomore and junior rows | The sheet says “Senior Standing” with no number. The team applied the Old Art. 24 bands (0–35, 36–70, 71–105, 106+) | resolved |
 | Old “first year” | credit_limit, population `past_first_year` | never matched | The old bylaw does not define it, so the 21-credit row is not applied (Nile ask 5) | open |
 | Old weekly hours | course_component | no rows for old courses | The spreadsheet has credits and prerequisites, not lecture, tutorial, and lab hours. Old courses get no implied sections | open |
 | Big Data elective CSCI 469 | elective_pool_course | not inserted from the conflict | The track map names it. The sheet’s elective list does not. No winner chosen | open |
@@ -1466,7 +1479,7 @@ The `is_incomplete` column follows from those counts. The same inputs and the sa
 
 | Domain | Tables | Seed when the schema is built? | Purpose |
 |---|---|---|---|
-| Bylaw / rules | bylaw, credit_limit, grade_scale, grade_scale_entry, standing_band, placement | Yes. Letter cut-points as transcribed in §3, re-checked against the PDFs at seed time. Old senior minimum stays null. 2025 `placement` rows as in §3 | Rule sets |
+| Bylaw / rules | bylaw, credit_limit, grade_scale, grade_scale_entry, standing_band, placement | Yes. Letter cut-points as transcribed in §3, re-checked against the PDFs at seed time. Old standing bands from Art. 24 (team decision, 2026-11-27). 2025 `placement` rows as in §3 | Rule sets |
 | Curriculum | program, track, course, course_component | Yes for names, old and new Computer Science courses, and 2025 contact hours. No old contact hours. No other programs’ courses | Catalog |
 | Prerequisites | requisite | Yes, hand-split from the sheets and the 2025 tables. No `#N/A` | Requirements |
 | Plan templates | plan_template, plan_slot, elective_pool, elective_pool_course | Yes for the eight old sheets, skipping ambiguous cells | Official paths |

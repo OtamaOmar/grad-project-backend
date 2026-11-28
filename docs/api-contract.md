@@ -152,7 +152,7 @@ Returned by login, signup, `/api/me` and onboarding. Never contains password dat
 - `credits_passed` counts each course once, even if it was passed twice.
 - `cgpa`: the highest grade per course counts (confirmed by the doctor on 2026-11-27). Only courses with `counts_in_gpa = true` and letters that have grade points take part. String such as `"2.91"`, or null.
 - `term_gpa`: every graded attempt in that term.
-- `standing`: the highest `standing_band` whose minimum the passed credits reach. Null when the bylaw has no numbered bands (the old bylaw today).
+- `standing`: the highest `standing_band` whose minimum the passed credits reach. Both bylaws have numbered bands (old: 0, 36, 71, 106 since the team decision of 2026-11-27), so it is null only when a bylaw has none.
 - Terms are oldest first (spring, summer, fall within a year). `in_progress` lists attempts whose `attempt_state` is `unresolved`.
 - Not included yet: `credit_limit`, `planning_term` (need the forecast engine) and `credits_by_area` (no area column).
 
